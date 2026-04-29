@@ -187,15 +187,15 @@
         </div>
 
         <!-- Panel Derecho: Red Nacional + Rutas -->
-        <div id="right-panel" class="glass-panel rounded-2xl pointer-events-auto flex flex-col ml-auto border-t-4 border-t-sky-500" style="width:19rem;max-height:96vh;">
+        <div id="right-panel" class="glass-panel rounded-2xl pointer-events-auto flex flex-col ml-auto self-start border-t-4 border-t-sky-500" style="width:19rem;max-height:96vh;">
             
             <!-- Header fijo -->
-            <div class="flex justify-between items-center px-3 py-2 border-b border-slate-700/50 flex-shrink-0" style="min-height:0">
-                <div>
+            <div id="rp-header" class="flex justify-between items-center px-3 py-2 border-b border-slate-700/50 flex-shrink-0" style="min-height:0">
+                <div id="rp-title-wrap">
                     <div class="text-xs font-bold text-white uppercase tracking-tight leading-none">Red Nacional WMS</div>
                     <div class="text-[8px] text-sky-400 font-mono">GEO-ESPACIAL V2.2 · PRO</div>
                 </div>
-                <div class="flex gap-1">
+                <div id="rp-actions" class="flex gap-1">
                     <button id="btn-toggle-map" onclick="toggleMapMode()" title="Satélite" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-1.5 py-1 rounded text-[8px] font-bold border border-slate-600">🛰</button>
                     <button id="btn-luces" onclick="toggleLuces()" title="Luces" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-1.5 py-1 rounded text-[8px] font-bold border border-slate-600">🌙</button>
                     <button onclick="toggleRightPanel()" id="btn-rp-collapse" title="Colapsar" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-1.5 py-1 rounded text-[8px] font-bold border border-slate-600">▲</button>
@@ -208,6 +208,7 @@
                 <button onclick="switchTab('almacenes')" id="tab-almacenes" class="tab-btn active flex-1 text-[8px] font-bold py-1.5 rounded uppercase tracking-wide border-b-2 border-sky-500 text-sky-400">📦 Almacenes</button>
                 <button onclick="switchTab('rutas')" id="tab-rutas" class="tab-btn flex-1 text-[8px] font-bold py-1.5 rounded uppercase tracking-wide border-b-2 border-transparent text-slate-400">🗺️ Rutas</button>
                 <button onclick="switchTab('distancias')" id="tab-distancias" class="tab-btn flex-1 text-[8px] font-bold py-1.5 rounded uppercase tracking-wide border-b-2 border-transparent text-slate-400">📏 Distancias</button>
+                <button onclick="switchTab('datos')" id="tab-datos" class="tab-btn flex-1 text-[8px] font-bold py-1.5 rounded uppercase tracking-wide border-b-2 border-transparent text-slate-400">CSV</button>
             </div>
 
             <!-- TAB: ALMACENES -->
@@ -401,6 +402,231 @@
                         <option value="GTO">Guanajuato</option>
                     </select>
                     <div id="distancias-desde-hub" class="space-y-1.5 max-h-56 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <div id="tab-content-datos" class="hidden space-y-3">
+                <input id="csv-file-input" type="file" accept=".csv,text/csv" class="hidden" onchange="handleCsvInputChange(event)">
+
+                <div class="bg-slate-900/80 rounded-lg p-3 border border-slate-700/50">
+                    <div class="text-[9px] text-sky-400 uppercase tracking-widest font-bold mb-2">Fuente de Datos</div>
+                    <div id="csv-status" class="text-[10px] text-slate-300 bg-slate-800/80 border border-slate-700 rounded-lg px-2 py-2 mb-2">
+                        Preparando inventario...
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <button onclick="connectSupabaseNow()" id="btn-source-supabase" class="bg-sky-700 hover:bg-sky-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Supabase Principal</button>
+                        <button onclick="openCsvFile()" id="btn-source-csv" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-[9px] font-bold transition-colors">CSV Respaldo</button>
+                    </div>
+                    <div id="supabase-config" class="bg-slate-950/70 border border-sky-900/50 rounded-lg px-2 py-2 mb-2 space-y-2">
+                        <div class="text-[9px] text-sky-300 uppercase tracking-widest font-bold">Conexion Supabase</div>
+                        <input id="supabase-url" type="text" placeholder="https://tu-proyecto.supabase.co" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        <input id="supabase-anon-key" type="password" placeholder="Anon key publica" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        <input id="supabase-table" type="text" value="inventory_items" placeholder="inventory_items" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="saveSupabaseConfig()" class="bg-sky-700 hover:bg-sky-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Guardar</button>
+                            <button onclick="connectSupabaseNow()" class="bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Conectar</button>
+                            <button onclick="clearSupabaseConfig()" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Limpiar</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="pushCurrentInventoryToSupabase()" class="bg-fuchsia-700 hover:bg-fuchsia-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Migrar Inventario</button>
+                            <button onclick="pullSupabaseNow()" class="bg-cyan-700 hover:bg-cyan-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Recargar Nube</button>
+                        </div>
+                        <div class="text-[9px] text-slate-500">Tabla sugerida: <span class="font-mono text-slate-300">inventory_items</span> con llave unica <span class="font-mono text-slate-300">slot_key</span>.</div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="openCsvFile()" class="bg-indigo-700 hover:bg-indigo-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Importar CSV</button>
+                        <button onclick="saveCsvFile()" class="bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Guardar Respaldo</button>
+                        <button onclick="downloadCsvFile()" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Exportar</button>
+                    </div>
+                </div>
+
+                <div class="bg-indigo-900/40 rounded-lg p-3 border border-indigo-500/50">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="col-span-2">
+                            <label class="text-[9px] text-indigo-300 uppercase tracking-widest block mb-1">Buscar SKU / Ubicacion</label>
+                            <input id="data-search" type="text" oninput="renderInventoryManager()" placeholder="Ej. CDMX-A1-9171 o MOD-11" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-indigo-500 focus:outline-none focus:border-sky-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-slate-400 uppercase tracking-widest block mb-1">Estado</label>
+                            <select id="data-state-filter" onchange="renderInventoryManager()" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 focus:outline-none focus:border-sky-500 cursor-pointer font-bold">
+                                <option value="all">Todos</option>
+                                <option value="CDMX">CDMX</option>
+                                <option value="JAL">JAL</option>
+                                <option value="NL">NL</option>
+                                <option value="BC">BC</option>
+                                <option value="YUC">YUC</option>
+                                <option value="VER">VER</option>
+                                <option value="CHIH">CHIH</option>
+                                <option value="GTO">GTO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-slate-400 uppercase tracking-widest block mb-1">Estatus</label>
+                            <select id="data-status-filter" onchange="renderInventoryManager()" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 focus:outline-none focus:border-sky-500 cursor-pointer font-bold">
+                                <option value="all">Todos</option>
+                                <option value="ocupado">Ocupados</option>
+                                <option value="vacio">Vacios</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 rounded-lg p-3 border border-slate-700/50">
+                    <div class="text-[9px] text-sky-400 uppercase tracking-widest font-bold mb-2">Resumen del Inventario</div>
+                    <div id="data-summary" class="text-[10px] text-slate-300 leading-relaxed">Sin registros cargados.</div>
+                </div>
+
+                <div class="bg-slate-900/80 rounded-lg p-3 border border-slate-700/50">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Registros</div>
+                        <div id="data-count" class="text-[9px] text-slate-500 font-mono">0 filas</div>
+                    </div>
+                    <div id="data-table" class="space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="bg-slate-900/80 rounded-lg p-3 border border-slate-700/50">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-[9px] text-fuchsia-300 uppercase tracking-widest font-bold">Bitacora de Cambios</div>
+                        <div class="flex gap-1">
+                            <button onclick="loadAuditLogNow()" class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-[8px] font-bold transition-colors">Actualizar</button>
+                            <button onclick="exportAuditLogCsv()" class="bg-fuchsia-700 hover:bg-fuchsia-600 text-white px-2 py-1 rounded text-[8px] font-bold transition-colors">Exportar</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <input id="audit-user" type="text" placeholder="Usuario o responsable" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        <input id="audit-device" type="text" placeholder="Equipo / terminal" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mb-2">
+                        <select id="audit-filter-type" onchange="renderAuditLog()" class="w-full bg-slate-800 text-white text-[11px] px-2 py-2 rounded border border-slate-600 font-bold">
+                            <option value="all">Todos</option>
+                            <option value="update">Update</option>
+                            <option value="move_update">Movimiento</option>
+                            <option value="clear_slot">Liberacion</option>
+                        </select>
+                        <input id="audit-filter-user" type="text" oninput="renderAuditLog()" placeholder="Filtrar usuario" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        <select id="audit-filter-range" onchange="renderAuditLog()" class="w-full bg-slate-800 text-white text-[11px] px-2 py-2 rounded border border-slate-600 font-bold">
+                            <option value="all">Todo</option>
+                            <option value="24h">24h</option>
+                            <option value="7d">7 dias</option>
+                            <option value="30d">30 dias</option>
+                        </select>
+                    </div>
+                    <div id="audit-log-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-[10px] text-slate-300">
+                        Sin movimientos recientes.
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 rounded-lg p-3 border border-slate-700/50">
+                    <div class="text-[9px] text-emerald-400 uppercase tracking-widest font-bold mb-2">Editor de Producto / Anaquel</div>
+                    <input id="edit-original-key" type="hidden">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Estado</label>
+                            <select id="edit-estado" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold">
+                                <option value="CDMX">CDMX</option>
+                                <option value="JAL">JAL</option>
+                                <option value="NL">NL</option>
+                                <option value="BC">BC</option>
+                                <option value="YUC">YUC</option>
+                                <option value="VER">VER</option>
+                                <option value="CHIH">CHIH</option>
+                                <option value="GTO">GTO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Zona</label>
+                            <select id="edit-zona" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold">
+                                <option value="ZONA A">ZONA A</option>
+                                <option value="ZONA B">ZONA B</option>
+                                <option value="ZONA C">ZONA C</option>
+                                <option value="ZONA D">ZONA D</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Rack</label>
+                            <select id="edit-rack" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold"></select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Nivel</label>
+                            <select id="edit-level" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold">
+                                <option value="L-1">L-1</option>
+                                <option value="L-2">L-2</option>
+                                <option value="L-3">L-3</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Posicion</label>
+                            <select id="edit-position" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold">
+                                <option value="P-1">P-1</option>
+                                <option value="P-2">P-2</option>
+                                <option value="P-3">P-3</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Estatus</label>
+                            <select id="edit-status" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold">
+                                <option value="Ocupado">Ocupado</option>
+                                <option value="Vacio">Vacio</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">SKU</label>
+                            <input id="edit-sku" type="text" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Tipo</label>
+                            <select id="edit-type" class="w-full bg-slate-800 text-white text-[11px] px-2 py-1.5 rounded border border-slate-600 font-bold">
+                                <option value="caja">Caja</option>
+                                <option value="costal">Costal</option>
+                                <option value="bolsa">Bolsa</option>
+                                <option value="vacio">Vacio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Unidad</label>
+                            <input id="edit-unidad" type="text" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Descripcion</label>
+                            <input id="edit-contenido" type="text" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Costo</label>
+                            <input id="edit-costo" type="number" step="0.01" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Peso</label>
+                            <input id="edit-peso" type="number" step="0.1" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Volumen</label>
+                            <input id="edit-volumen" type="number" step="0.1" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Dias</label>
+                            <input id="edit-days" type="number" step="1" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Fecha Ingreso</label>
+                            <input id="edit-fecha-ingreso" type="date" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Fecha Salida</label>
+                            <input id="edit-fecha-salida" type="date" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Tipo Anterior / Notas</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="edit-tipo-anterior" type="text" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono" placeholder="caja / costal">
+                                <input id="edit-notas" type="text" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600" placeholder="Notas operativas">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-3">
+                        <button onclick="saveInventoryEditor()" class="bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Guardar</button>
+                        <button onclick="clearInventorySlot()" class="bg-amber-700 hover:bg-amber-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Liberar Slot</button>
+                        <button onclick="resetInventoryEditor()" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Reset</button>
+                    </div>
                 </div>
             </div>
 
@@ -861,6 +1087,1028 @@
         const globalWallMaterial = new THREE.MeshPhysicalMaterial({ color: '#0f172a', metalness: 0.8, roughness: 0.2, transparent: true, opacity: 0.4, clearcoat: 1.0, side: THREE.DoubleSide });
         const globalPillarMaterial = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.8 });
 
+        const inventoryZoneLayout = [
+            { id:'ZONA A', startX:-45, startZ:-55, typePref:'caja'   },
+            { id:'ZONA B', startX: 25, startZ:-55, typePref:'mixto'  },
+            { id:'ZONA C', startX:-45, startZ:  5, typePref:'costal' },
+            { id:'ZONA D', startX: 25, startZ:  5, typePref:'bolsa'  }
+        ];
+        const inventoryRackOptions = [];
+        for(let rackNum = 1; rackNum <= 4; rackNum++) {
+            for(let segment = 1; segment <= 3; segment++) inventoryRackOptions.push(`MOD-${rackNum}${segment}`);
+        }
+        const inventoryLevelOptions = ['L-1', 'L-2', 'L-3'];
+        const inventoryPositionOptions = ['P-1', 'P-2', 'P-3'];
+        const inventoryPositionOffset = { 'P-1': -2.5, 'P-2': 0, 'P-3': 2.5 };
+        const inventoryCsvFileName = 'mercancias_dashboard.csv';
+        const SUPABASE_CONFIG_KEY = 'dashboard_supabase_config_v1';
+
+        let inventoryRows = [];
+        let inventoryIndex = new Map();
+        let slotMeshIndex = new Map();
+        let inventoryFileHandle = null;
+        let inventorySourceName = inventoryCsvFileName;
+        let inventorySourceMode = 'supabase';
+        let supabaseConfig = { url: '', anonKey: '', table: 'inventory_items' };
+        let supabaseAutoRefreshHandle = null;
+        let auditLogRows = [];
+
+        function inventoryStateName(estadoId) {
+            return (estadosRed.find(e => e.id === estadoId) || {}).nombre || estadoId;
+        }
+        function normalizeText(value, fallback = '') {
+            return value === undefined || value === null ? fallback : String(value).trim();
+        }
+        function numberOrZero(value) {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : 0;
+        }
+        function slotIndexFromPosition(position) {
+            const parsed = parseInt(String(position || '').replace(/[^\d]/g, ''), 10);
+            return Number.isFinite(parsed) && parsed >= 1 ? parsed : 1;
+        }
+        function makeInventoryKey(estado, zona, rack, level, position) {
+            return [estado, zona, rack, level, position].map(v => normalizeText(v).toUpperCase()).join('|');
+        }
+        function parseInventoryKey(key) {
+            const [estado = 'CDMX', zona = 'ZONA A', rack = 'MOD-11', level = 'L-1', position = 'P-1'] = String(key || '').split('|');
+            return { estado, zona, rack, level, position, slotIndex: slotIndexFromPosition(position) };
+        }
+        function cloneRecord(record) {
+            return JSON.parse(JSON.stringify(record));
+        }
+        function createEmptyInventoryRecord(estado, zona, rack, level, position, slotIndex = slotIndexFromPosition(position), estadoNombre = inventoryStateName(estado)) {
+            return {
+                estado,
+                estadoNombre,
+                zona,
+                rack,
+                level,
+                position,
+                slotIndex,
+                sku: 'VACIO',
+                estadoStatus: 'Vacio',
+                type: 'vacio',
+                contenido: 'Espacio disponible',
+                fechaIngreso: '',
+                fechaSalida: '',
+                tipoAnterior: 'caja',
+                costo: 0,
+                peso: 0,
+                volumen: 0,
+                unidad: '--',
+                daysInWarehouse: 0,
+                notas: 'Slot sin producto'
+            };
+        }
+        function normalizeInventoryRecord(raw) {
+            const estado = normalizeText(raw.estado || raw.ESTADO || 'CDMX').toUpperCase();
+            const estadoNombre = normalizeText(raw.estadoNombre || raw.estado_nombre || inventoryStateName(estado), inventoryStateName(estado));
+            const zona = normalizeText(raw.zona || raw.ZONA || 'ZONA A').toUpperCase();
+            const rack = normalizeText(raw.rack || raw.RACK || 'MOD-11').toUpperCase();
+            const level = normalizeText(raw.level || raw.nivel || raw.LEVEL || 'L-1').toUpperCase();
+            const position = normalizeText(raw.position || raw.posicion || raw.POSITION || `P-${raw.slotIndex || 1}`).toUpperCase();
+            const slotIndex = slotIndexFromPosition(raw.slotIndex || position);
+            const sku = normalizeText(raw.sku || raw.id || raw.SKU || 'VACIO').toUpperCase() || 'VACIO';
+            const statusRaw = normalizeText(raw.estadoStatus || raw.estadostatus || raw.status || raw.STATUS || '').toLowerCase();
+            const typeRaw = normalizeText(raw.type || raw.tipo || raw.TYPE || '').toLowerCase();
+            const isVacant = statusRaw === 'vacio' || typeRaw === 'vacio' || sku === 'VACIO';
+            if(isVacant) {
+                return {
+                    ...createEmptyInventoryRecord(estado, zona, rack, level, position, slotIndex, estadoNombre),
+                    fechaSalida: normalizeText(raw.fechaSalida || raw.fecha_salida || ''),
+                    tipoAnterior: normalizeText(raw.tipoAnterior || raw.tipo_anterior || 'caja'),
+                    notas: normalizeText(raw.notas || 'Slot sin producto')
+                };
+            }
+            const type = ['caja', 'costal', 'bolsa'].includes(typeRaw) ? typeRaw : 'caja';
+            return {
+                estado,
+                estadoNombre,
+                zona,
+                rack,
+                level,
+                position,
+                slotIndex,
+                sku,
+                estadoStatus: 'Ocupado',
+                type,
+                contenido: normalizeText(raw.contenido || raw.descripcion || ''),
+                fechaIngreso: normalizeText(raw.fechaIngreso || raw.fecha_ingreso || ''),
+                fechaSalida: normalizeText(raw.fechaSalida || raw.fecha_salida || ''),
+                tipoAnterior: normalizeText(raw.tipoAnterior || raw.tipo_anterior || ''),
+                costo: numberOrZero(raw.costo),
+                peso: numberOrZero(raw.peso),
+                volumen: numberOrZero(raw.volumen),
+                unidad: normalizeText(raw.unidad || '--'),
+                daysInWarehouse: Math.max(0, Math.round(numberOrZero(raw.daysInWarehouse || raw.dias || 0))),
+                notas: normalizeText(raw.notas || '')
+            };
+        }
+        function parseCsvLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            for(let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if(char === '"') {
+                    if(inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else inQuotes = !inQuotes;
+                } else if(char === ',' && !inQuotes) {
+                    values.push(current);
+                    current = '';
+                } else current += char;
+            }
+            values.push(current);
+            return values;
+        }
+        function parseInventoryCsv(text) {
+            const lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim().length > 0);
+            if(!lines.length) return [];
+            const headers = parseCsvLine(lines[0]);
+            return lines.slice(1).map(line => {
+                const values = parseCsvLine(line);
+                const row = {};
+                headers.forEach((header, index) => { row[header] = values[index] ?? ''; });
+                return normalizeInventoryRecord(row);
+            });
+        }
+        function csvEscape(value) {
+            const text = value === undefined || value === null ? '' : String(value);
+            return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+        }
+        function serializeInventoryCsv(rows) {
+            const headers = ['estado','estadoNombre','zona','rack','level','position','slotIndex','sku','estadoStatus','type','contenido','fechaIngreso','fechaSalida','tipoAnterior','costo','peso','volumen','unidad','daysInWarehouse','notas'];
+            const lines = [
+                headers.join(','),
+                ...rows.map(row => headers.map(header => csvEscape(row[header])).join(','))
+            ];
+            return lines.join('\r\n');
+        }
+        function reindexInventoryRows() {
+            inventoryIndex = new Map();
+            inventoryRows.forEach(row => inventoryIndex.set(makeInventoryKey(row.estado, row.zona, row.rack, row.level, row.position), row));
+        }
+        function hashString(value) {
+            let hash = 0;
+            for(let i = 0; i < value.length; i++) hash = ((hash << 5) - hash) + value.charCodeAt(i);
+            return Math.abs(hash);
+        }
+        function createSeededRandom(seed) {
+            let state = seed >>> 0;
+            return () => {
+                state = (1664525 * state + 1013904223) >>> 0;
+                return state / 4294967296;
+            };
+        }
+        function createFallbackInventoryData() {
+            const rows = [];
+            const rnd = createSeededRandom(240421);
+            estadosRed.forEach(estado => {
+                inventoryZoneLayout.forEach(zona => {
+                    for(let rackNum = 1; rackNum <= 4; rackNum++) {
+                        for(let segment = 1; segment <= 3; segment++) {
+                            for(let levelNum = 1; levelNum <= 3; levelNum++) {
+                                inventoryPositionOptions.forEach((position, idx) => {
+                                    const ocupado = rnd() <= 0.78;
+                                    const rack = `MOD-${rackNum}${segment}`;
+                                    const level = `L-${levelNum}`;
+                                    const slotIndex = idx + 1;
+                                    if(!ocupado) {
+                                        rows.push(normalizeInventoryRecord({
+                                            estado: estado.id,
+                                            estadoNombre: estado.nombre,
+                                            zona: zona.id,
+                                            rack,
+                                            level,
+                                            position,
+                                            slotIndex,
+                                            sku: 'VACIO',
+                                            estadoStatus: 'Vacio',
+                                            type: 'vacio',
+                                            contenido: 'Espacio disponible',
+                                            fechaSalida: new Date(Date.now() - Math.floor(rnd() * 120) * 86400000).toISOString().slice(0, 10),
+                                            tipoAnterior: rnd() > 0.5 ? 'caja' : 'costal',
+                                            notas: 'Slot sin producto'
+                                        }));
+                                        return;
+                                    }
+                                    let type = 'caja';
+                                    if(zona.typePref === 'caja') type = rnd() > 0.10 ? 'caja' : 'bolsa';
+                                    else if(zona.typePref === 'costal') type = rnd() > 0.10 ? 'costal' : 'caja';
+                                    else if(zona.typePref === 'bolsa') type = rnd() > 0.10 ? 'bolsa' : 'caja';
+                                    else {
+                                        const pick = rnd();
+                                        type = pick < 0.33 ? 'caja' : (pick < 0.66 ? 'costal' : 'bolsa');
+                                    }
+                                    const desc = skuDescriptores[type][Math.floor(rnd() * skuDescriptores[type].length)];
+                                    const peso = +(desc.pesoBase * (0.85 + rnd() * 0.30)).toFixed(1);
+                                    const volumen = type === 'bolsa' ? +(peso * (0.8 + rnd() * 0.4)).toFixed(1) : (desc.unidad === 'lt' ? +(peso * (0.95 + rnd() * 0.10)).toFixed(1) : 0);
+                                    const dias = Math.floor(rnd() * 180);
+                                    rows.push(normalizeInventoryRecord({
+                                        estado: estado.id,
+                                        estadoNombre: estado.nombre,
+                                        zona: zona.id,
+                                        rack,
+                                        level,
+                                        position,
+                                        slotIndex,
+                                        sku: `${estado.id}-${zona.id.split(' ')[1]}${rackNum}-${String(1000 + Math.floor(rnd() * 9000))}`,
+                                        estadoStatus: 'Ocupado',
+                                        type,
+                                        contenido: desc.contenido,
+                                        fechaIngreso: new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10),
+                                        costo: Math.floor(50 + rnd() * 1000),
+                                        peso,
+                                        volumen,
+                                        unidad: desc.unidad,
+                                        daysInWarehouse: dias,
+                                        notas: ''
+                                    }));
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+            return rows;
+        }
+        function setCsvStatus(message, tone = 'info') {
+            const el = document.getElementById('csv-status');
+            if(!el) return;
+            const classes = {
+                info: 'text-slate-300 bg-slate-800/80 border-slate-700',
+                success: 'text-emerald-200 bg-emerald-900/30 border-emerald-500/40',
+                warning: 'text-amber-200 bg-amber-900/30 border-amber-500/40',
+                error: 'text-red-200 bg-red-900/30 border-red-500/40'
+            };
+            el.className = `text-[10px] border rounded-lg px-2 py-2 mb-2 ${classes[tone] || classes.info}`;
+            el.textContent = message;
+        }
+        function loadSupabaseConfig() {
+            try {
+                const raw = localStorage.getItem(SUPABASE_CONFIG_KEY);
+                if(raw) supabaseConfig = { table: 'inventory_items', ...JSON.parse(raw) };
+            } catch (error) {}
+            const urlInput = document.getElementById('supabase-url');
+            const keyInput = document.getElementById('supabase-anon-key');
+            const tableInput = document.getElementById('supabase-table');
+            const auditUserInput = document.getElementById('audit-user');
+            const auditDeviceInput = document.getElementById('audit-device');
+            const auditFilterUserInput = document.getElementById('audit-filter-user');
+            if(urlInput) urlInput.value = supabaseConfig.url || '';
+            if(keyInput) keyInput.value = supabaseConfig.anonKey || '';
+            if(tableInput) tableInput.value = supabaseConfig.table || 'inventory_items';
+            if(auditUserInput) auditUserInput.value = localStorage.getItem('dashboard_audit_user') || '';
+            if(auditDeviceInput) auditDeviceInput.value = localStorage.getItem('dashboard_audit_device') || '';
+            if(auditFilterUserInput) auditFilterUserInput.value = localStorage.getItem('dashboard_audit_filter_user') || '';
+        }
+        function readSupabaseConfigFromInputs() {
+            supabaseConfig = {
+                url: normalizeText(document.getElementById('supabase-url')?.value || ''),
+                anonKey: normalizeText(document.getElementById('supabase-anon-key')?.value || ''),
+                table: normalizeText(document.getElementById('supabase-table')?.value || 'inventory_items', 'inventory_items')
+            };
+            return supabaseConfig;
+        }
+        function mapSupabaseRowToInventory(row) {
+            return {
+                estado: row.estado,
+                estadoNombre: row.estado_nombre,
+                zona: row.zona,
+                rack: row.rack,
+                level: row.level,
+                position: row.position,
+                slotIndex: row.slot_index,
+                sku: row.sku,
+                estadoStatus: row.estado_status,
+                type: row.type,
+                contenido: row.contenido,
+                fechaIngreso: row.fecha_ingreso,
+                fechaSalida: row.fecha_salida,
+                tipoAnterior: row.tipo_anterior,
+                costo: row.costo,
+                peso: row.peso,
+                volumen: row.volumen,
+                unidad: row.unidad,
+                daysInWarehouse: row.days_in_warehouse,
+                notas: row.notas
+            };
+        }
+        function mapInventoryRowToSupabase(record) {
+            return {
+                slot_key: makeInventoryKey(record.estado, record.zona, record.rack, record.level, record.position),
+                estado: record.estado,
+                estado_nombre: record.estadoNombre,
+                zona: record.zona,
+                rack: record.rack,
+                level: record.level,
+                position: record.position,
+                slot_index: record.slotIndex,
+                sku: record.sku,
+                estado_status: record.estadoStatus,
+                type: record.type,
+                contenido: record.contenido,
+                fecha_ingreso: record.fechaIngreso || null,
+                fecha_salida: record.fechaSalida || null,
+                tipo_anterior: record.tipoAnterior || null,
+                costo: numberOrZero(record.costo),
+                peso: numberOrZero(record.peso),
+                volumen: numberOrZero(record.volumen),
+                unidad: record.unidad || '--',
+                days_in_warehouse: Math.max(0, Math.round(numberOrZero(record.daysInWarehouse || 0))),
+                notas: record.notas || ''
+            };
+        }
+        function hasSupabaseConfig() {
+            return !!(supabaseConfig.url && supabaseConfig.anonKey && supabaseConfig.table);
+        }
+        function getSupabaseRestUrl(query = '') {
+            const base = `${supabaseConfig.url.replace(/\/+$/,'')}/rest/v1/${encodeURIComponent(supabaseConfig.table)}`;
+            return query ? `${base}?${query}` : base;
+        }
+        function getSupabaseAuditUrl(query = '') {
+            const base = `${supabaseConfig.url.replace(/\/+$/,'')}/rest/v1/inventory_audit_log`;
+            return query ? `${base}?${query}` : base;
+        }
+        function currentAuditActor() {
+            const user = normalizeText(document.getElementById('audit-user')?.value || localStorage.getItem('dashboard_audit_user') || '', 'Operador');
+            const device = normalizeText(document.getElementById('audit-device')?.value || localStorage.getItem('dashboard_audit_device') || '', 'Terminal Web');
+            localStorage.setItem('dashboard_audit_user', user);
+            localStorage.setItem('dashboard_audit_device', device);
+            return { user, device };
+        }
+        function auditTypeLabel(type) {
+            return ({
+                update: 'Actualizacion',
+                move_update: 'Movimiento',
+                clear_slot: 'Liberacion'
+            })[type] || 'Evento';
+        }
+        function auditTypeClass(type) {
+            return ({
+                update: 'text-emerald-300 border-emerald-500/30 bg-emerald-900/20',
+                move_update: 'text-sky-300 border-sky-500/30 bg-sky-900/20',
+                clear_slot: 'text-amber-300 border-amber-500/30 bg-amber-900/20'
+            })[type] || 'text-fuchsia-300 border-fuchsia-500/30 bg-fuchsia-900/20';
+        }
+        function filteredAuditRows() {
+            const type = document.getElementById('audit-filter-type')?.value || 'all';
+            const userRaw = normalizeText(document.getElementById('audit-filter-user')?.value || '');
+            localStorage.setItem('dashboard_audit_filter_user', userRaw);
+            const user = userRaw.toUpperCase();
+            const range = document.getElementById('audit-filter-range')?.value || 'all';
+            const now = Date.now();
+            return auditLogRows.filter(row => {
+                const typeOk = type === 'all' || row.action_type === type;
+                const userOk = !user || String(row.actor_name || '').toUpperCase().includes(user);
+                let rangeOk = true;
+                if(range !== 'all' && row.created_at) {
+                    const ageMs = now - new Date(row.created_at).getTime();
+                    const maxMs = range === '24h' ? 86400000 : range === '7d' ? 7 * 86400000 : 30 * 86400000;
+                    rangeOk = ageMs <= maxMs;
+                }
+                return typeOk && userOk && rangeOk;
+            });
+        }
+        function renderAuditLog() {
+            const el = document.getElementById('audit-log-list');
+            if(!el) return;
+            const rows = filteredAuditRows();
+            if(!rows.length) {
+                el.innerHTML = 'Sin movimientos recientes.';
+                return;
+            }
+            el.innerHTML = rows.map(row => {
+                const when = row.created_at ? new Date(row.created_at).toLocaleString() : '--';
+                const badgeClass = auditTypeClass(row.action_type);
+                return `
+                    <div class="bg-slate-800/70 border border-slate-700 rounded-lg px-2 py-2">
+                        <div class="flex justify-between gap-2">
+                            <div class="px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${badgeClass}">${escapeHtml(auditTypeLabel(row.action_type))}</div>
+                            <div class="text-slate-500 font-mono">${escapeHtml(when)}</div>
+                        </div>
+                        <div class="text-slate-200 font-mono mt-1">${escapeHtml(row.slot_key || '--')}</div>
+                        <div class="text-slate-400 mt-1">${escapeHtml(row.summary || '')}</div>
+                        <div class="text-slate-500 mt-1">Usuario: ${escapeHtml(row.actor_name || '--')} · Equipo: ${escapeHtml(row.actor_device || '--')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        window.exportAuditLogCsv = function() {
+            const rows = filteredAuditRows();
+            if(!rows.length) {
+                setCsvStatus('No hay movimientos en la bitacora para exportar.', 'warning');
+                return;
+            }
+            const headers = ['created_at','action_type','slot_key','actor_name','actor_device','summary'];
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => headers.map(h => csvEscape(row[h] ?? '')).join(','))
+            ].join('\r\n');
+            triggerCsvDownload(csv, `bitacora_inventario_${new Date().toISOString().slice(0,10)}.csv`);
+            setCsvStatus('Bitacora exportada a CSV.', 'success');
+        };
+        function updateSourceButtons() {
+            const btnSupabase = document.getElementById('btn-source-supabase');
+            const btnCsv = document.getElementById('btn-source-csv');
+            if(btnSupabase) btnSupabase.className = `${inventorySourceMode === 'supabase' ? 'bg-sky-700 text-white' : 'bg-slate-700 text-slate-200'} hover:bg-sky-600 py-2 rounded text-[9px] font-bold transition-colors`;
+            if(btnCsv) btnCsv.className = `bg-slate-700 ${inventorySourceMode === 'csv' ? 'text-white border border-indigo-400/50' : 'text-slate-200'} hover:bg-indigo-600 py-2 rounded text-[9px] font-bold transition-colors`;
+        }
+        function stopSupabaseAutoRefresh() {
+            if(supabaseAutoRefreshHandle) {
+                clearInterval(supabaseAutoRefreshHandle);
+                supabaseAutoRefreshHandle = null;
+            }
+        }
+        function startSupabaseAutoRefresh() {
+            stopSupabaseAutoRefresh();
+            if(inventorySourceMode !== 'supabase' || !hasSupabaseConfig()) return;
+            supabaseAutoRefreshHandle = setInterval(() => {
+                if(document.visibilityState === 'visible') loadInventoryFromSupabase(true);
+            }, 30000);
+        }
+        async function loadInventoryFromSupabase(silent = false) {
+            readSupabaseConfigFromInputs();
+            if(!hasSupabaseConfig()) {
+                if(!silent) setCsvStatus('Configura URL, anon key y tabla de Supabase para conectar el inventario en linea.', 'warning');
+                return false;
+            }
+            const query = 'select=*&order=estado.asc,zona.asc,rack.asc,level.asc,position.asc';
+            const response = await fetch(getSupabaseRestUrl(query), {
+                headers: {
+                    'apikey': supabaseConfig.anonKey,
+                    'Authorization': `Bearer ${supabaseConfig.anonKey}`
+                }
+            });
+            if(!response.ok) throw new Error(`Supabase GET ${response.status}`);
+            const rows = (await response.json()).map(mapSupabaseRowToInventory);
+            applyInventoryDataset(rows, `Supabase · ${supabaseConfig.table}`, true);
+            inventorySourceMode = 'supabase';
+            updateSourceButtons();
+            if(!silent) setCsvStatus(`Supabase conectado: ${supabaseConfig.table}. Actualizacion automatica cada 30s.`, 'success');
+            loadAuditLogNow(true);
+            startSupabaseAutoRefresh();
+            return true;
+        }
+        async function pushInventoryRowToSupabase(record) {
+            if(inventorySourceMode !== 'supabase' || !hasSupabaseConfig()) return false;
+            const payload = [mapInventoryRowToSupabase(record)];
+            const response = await fetch(getSupabaseRestUrl('on_conflict=slot_key'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseConfig.anonKey,
+                    'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+                    'Prefer': 'resolution=merge-duplicates,return=representation'
+                },
+                body: JSON.stringify(payload)
+            });
+            if(!response.ok) throw new Error(`Supabase UPSERT ${response.status}`);
+            return true;
+        }
+        async function pushInventoryBatchToSupabase(records) {
+            if(!hasSupabaseConfig()) throw new Error('Falta configuracion de Supabase');
+            const batchSize = 250;
+            for(let i = 0; i < records.length; i += batchSize) {
+                const payload = records.slice(i, i + batchSize).map(mapInventoryRowToSupabase);
+                const response = await fetch(getSupabaseRestUrl('on_conflict=slot_key'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': supabaseConfig.anonKey,
+                        'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+                        'Prefer': 'resolution=merge-duplicates,return=minimal'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if(!response.ok) throw new Error(`Supabase lote ${Math.floor(i / batchSize) + 1}: ${response.status}`);
+            }
+            return true;
+        }
+        async function pushAuditLogToSupabase(actionType, slotKey, summary, payload = {}) {
+            if(inventorySourceMode !== 'supabase' || !hasSupabaseConfig()) return false;
+            const actor = currentAuditActor();
+            const response = await fetch(getSupabaseAuditUrl(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseConfig.anonKey,
+                    'Authorization': `Bearer ${supabaseConfig.anonKey}`,
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify([{
+                    action_type: actionType,
+                    slot_key: slotKey,
+                    actor_name: actor.user,
+                    actor_device: actor.device,
+                    summary,
+                    payload_json: payload
+                }])
+            });
+            if(!response.ok) throw new Error(`Supabase AUDIT ${response.status}`);
+            return true;
+        }
+        window.loadAuditLogNow = async function(silent = false) {
+            if(!hasSupabaseConfig()) { if(!silent) renderAuditLog(); return; }
+            try {
+                const response = await fetch(getSupabaseAuditUrl('select=*&order=created_at.desc&limit=20'), {
+                    headers: {
+                        'apikey': supabaseConfig.anonKey,
+                        'Authorization': `Bearer ${supabaseConfig.anonKey}`
+                    }
+                });
+                if(response.status === 404) {
+                    auditLogRows = [];
+                    renderAuditLog();
+                    if(!silent) setCsvStatus('La bitacora aun no existe en Supabase. Ejecuta otra vez el SQL actualizado para crear inventory_audit_log.', 'warning');
+                    return;
+                }
+                if(!response.ok) throw new Error(`Supabase AUDIT GET ${response.status}`);
+                auditLogRows = await response.json();
+                renderAuditLog();
+            } catch (error) {
+                if(!silent) setCsvStatus(`No se pudo leer la bitacora: ${error.message}`, 'warning');
+            }
+        };
+        window.saveSupabaseConfig = function() {
+            readSupabaseConfigFromInputs();
+            localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(supabaseConfig));
+            setCsvStatus('Configuracion Supabase guardada en este navegador.', 'success');
+        };
+        window.clearSupabaseConfig = function() {
+            supabaseConfig = { url: '', anonKey: '', table: 'inventory_items' };
+            localStorage.removeItem(SUPABASE_CONFIG_KEY);
+            if(inventorySourceMode === 'supabase') inventorySourceMode = 'csv';
+            stopSupabaseAutoRefresh();
+            loadSupabaseConfig();
+            updateSourceButtons();
+            setCsvStatus('Configuracion Supabase limpiada. El tablero quedara en modo local temporal hasta volver a conectar la nube.', 'info');
+        };
+        window.connectSupabaseNow = async function() {
+            try {
+                saveSupabaseConfig();
+                await loadInventoryFromSupabase(false);
+            } catch (error) {
+                setCsvStatus(`No se pudo conectar a Supabase: ${error.message}`, 'error');
+            }
+        };
+        window.pullSupabaseNow = async function() {
+            try {
+                await loadInventoryFromSupabase(false);
+            } catch (error) {
+                setCsvStatus(`No se pudo recargar Supabase: ${error.message}`, 'error');
+            }
+        };
+        window.pushCurrentInventoryToSupabase = async function() {
+            try {
+                saveSupabaseConfig();
+                if(!hasSupabaseConfig()) {
+                    setCsvStatus('Completa la configuracion de Supabase antes de migrar.', 'warning');
+                    return;
+                }
+                const sourceRows = inventoryRows.length ? inventoryRows : createFallbackInventoryData();
+                setCsvStatus(`Migrando ${sourceRows.length} registros a Supabase...`, 'info');
+                await pushInventoryBatchToSupabase(sourceRows);
+                inventorySourceMode = 'supabase';
+                updateSourceButtons();
+                await loadInventoryFromSupabase(true);
+                setCsvStatus(`Migracion completa: ${sourceRows.length} registros enviados a Supabase.`, 'success');
+            } catch (error) {
+                setCsvStatus(`No se pudo migrar el inventario a Supabase: ${error.message}`, 'error');
+            }
+        };
+        window.setInventorySourceMode = async function(mode) {
+            if(mode === 'supabase') return connectSupabaseNow();
+            inventorySourceMode = 'csv';
+            stopSupabaseAutoRefresh();
+            updateSourceButtons();
+            setCsvStatus(`Respaldo local activo temporalmente: ${inventorySourceName}.`, 'info');
+        };
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        function populateRackOptions() {
+            const select = document.getElementById('edit-rack');
+            if(!select || select.options.length) return;
+            inventoryRackOptions.forEach(rack => {
+                const option = document.createElement('option');
+                option.value = rack;
+                option.textContent = rack;
+                select.appendChild(option);
+            });
+        }
+        function applyInventoryDataset(rows, sourceName, writable = false) {
+            inventoryRows = rows.map(normalizeInventoryRecord);
+            reindexInventoryRows();
+            inventorySourceName = sourceName || inventoryCsvFileName;
+            setCsvStatus(writable ? `Fuente activa: ${inventorySourceName}` : `Inventario activo: ${inventorySourceName}`, writable ? 'success' : 'info');
+            renderInventoryManager();
+            if(slotMeshIndex.size) refreshAllInventoryMeshes();
+        }
+        async function loadInitialInventoryData() {
+            populateRackOptions();
+            loadSupabaseConfig();
+            updateSourceButtons();
+            if(hasSupabaseConfig()) {
+                try {
+                    await loadInventoryFromSupabase(false);
+                    return;
+                } catch (error) {
+                    setCsvStatus(`Supabase no respondio. Se usara CSV local temporalmente. ${error.message}`, 'warning');
+                }
+            }
+            try {
+                const response = await fetch(inventoryCsvFileName);
+                if(!response.ok) throw new Error(`HTTP ${response.status}`);
+                applyInventoryDataset(parseInventoryCsv(await response.text()), inventoryCsvFileName, false);
+                setCsvStatus(`CSV cargado automaticamente: ${inventoryCsvFileName}`, 'success');
+            } catch (error) {
+                applyInventoryDataset(createFallbackInventoryData(), 'Inventario temporal local', false);
+                setCsvStatus(`No se pudo abrir automaticamente ${inventoryCsvFileName}. Usa "Abrir CSV" para vincular el archivo físico.`, 'warning');
+            }
+        }
+        function getInventoryRecordForSlot(estado, zona, rack, level, position, slotIndex, estadoNombre) {
+            const key = makeInventoryKey(estado, zona, rack, level, position);
+            return inventoryIndex.get(key) || createEmptyInventoryRecord(estado, zona, rack, level, position, slotIndex, estadoNombre);
+        }
+        function makeVisualMesh(record, positionVector) {
+            let mesh;
+            if(record.type === 'vacio') {
+                mesh = new THREE.Mesh(geoCaja, ghostMatInner);
+                mesh.add(new THREE.LineSegments(edgesGeoCaja, ghostMatEdge));
+            } else if(record.type === 'costal') mesh = new THREE.Mesh(geoCostal, matCostal);
+            else if(record.type === 'bolsa') mesh = new THREE.Mesh(geoBolsa, matBolsa);
+            else mesh = new THREE.Mesh(geoCaja, matCaja);
+            mesh.position.copy(positionVector);
+            if(record.type === 'costal' || record.type === 'bolsa') {
+                const rotSeed = hashString(makeInventoryKey(record.estado, record.zona, record.rack, record.level, record.position) + record.sku);
+                mesh.rotation.y = (rotSeed % 360) * (Math.PI / 180);
+            }
+            mesh.castShadow = record.type !== 'vacio';
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+        function recordToUserData(record) {
+            return {
+                slotKey: makeInventoryKey(record.estado, record.zona, record.rack, record.level, record.position),
+                estado: record.estado,
+                estadoNombre: record.estadoNombre,
+                zona: record.zona,
+                rack: record.rack,
+                level: record.level,
+                position: record.position,
+                slotIndex: record.slotIndex,
+                id: record.sku,
+                sku: record.sku,
+                estadoStatus: record.estadoStatus,
+                type: record.type,
+                contenido: record.contenido,
+                fechaIngreso: record.fechaIngreso || '--',
+                fechaSalida: record.fechaSalida || '--',
+                tipoAnterior: record.tipoAnterior || '--',
+                costo: numberOrZero(record.costo),
+                peso: numberOrZero(record.peso),
+                volumen: numberOrZero(record.volumen),
+                unidad: record.unidad || '--',
+                daysInWarehouse: Math.max(0, Math.round(numberOrZero(record.daysInWarehouse || 0))),
+                notas: record.notas || ''
+            };
+        }
+        function attachRecordToHitBox(hitBox, record) {
+            const previousVisual = hitBox.userData && hitBox.userData.visualMesh;
+            if(previousVisual) {
+                scene.remove(previousVisual);
+                if(previousVisual.children) previousVisual.children.forEach(child => scene.remove(child));
+            }
+            const mesh = makeVisualMesh(record, hitBox.position.clone());
+            scene.add(mesh);
+            const userData = recordToUserData(record);
+            userData.visualMesh = mesh;
+            userData.originalMaterial = mesh.material;
+            mesh.userData = userData;
+            hitBox.userData = userData;
+        }
+        function refreshSlotMesh(slotKey) {
+            const hitBox = slotMeshIndex.get(slotKey);
+            if(!hitBox) return;
+            const record = inventoryIndex.get(slotKey);
+            if(record) {
+                attachRecordToHitBox(hitBox, record);
+                return;
+            }
+            const data = hitBox.userData || {};
+            attachRecordToHitBox(
+                hitBox,
+                createEmptyInventoryRecord(
+                    data.estado || 'CDMX',
+                    data.zona || 'ZONA A',
+                    data.rack || 'MOD-11',
+                    data.level || 'L-1',
+                    data.position || 'P-1',
+                    data.slotIndex || slotIndexFromPosition(data.position || 'P-1'),
+                    inventoryStateName(data.estado || 'CDMX')
+                )
+            );
+        }
+        function refreshAllInventoryMeshes() {
+            slotMeshIndex.forEach((_, key) => refreshSlotMesh(key));
+            if(currentHeatmap !== 'none') toggleHeatmap(currentHeatmap);
+            aplicarFiltrosUI(false);
+            renderInventoryManager();
+        }
+        function mutateSlotRecord(slotKey, nextRecord) {
+            const current = inventoryIndex.get(slotKey);
+            const normalized = normalizeInventoryRecord(nextRecord);
+            if(current) {
+                Object.keys(current).forEach(key => delete current[key]);
+                Object.assign(current, normalized);
+            } else inventoryRows.push(normalized);
+            reindexInventoryRows();
+        }
+        function loadRecordIntoEditor(slotKeyOrRecord) {
+            const record = typeof slotKeyOrRecord === 'string' ? inventoryIndex.get(slotKeyOrRecord) : slotKeyOrRecord;
+            if(!record) return;
+            populateRackOptions();
+            document.getElementById('edit-original-key').value = makeInventoryKey(record.estado, record.zona, record.rack, record.level, record.position);
+            document.getElementById('edit-estado').value = record.estado;
+            document.getElementById('edit-zona').value = record.zona;
+            document.getElementById('edit-rack').value = record.rack;
+            document.getElementById('edit-level').value = record.level;
+            document.getElementById('edit-position').value = record.position;
+            document.getElementById('edit-status').value = record.estadoStatus;
+            document.getElementById('edit-sku').value = record.sku === 'VACIO' ? '' : record.sku;
+            document.getElementById('edit-type').value = record.type;
+            document.getElementById('edit-unidad').value = record.unidad === '--' ? '' : record.unidad;
+            document.getElementById('edit-contenido').value = record.contenido === 'Espacio disponible' ? '' : record.contenido;
+            document.getElementById('edit-costo').value = record.costo || '';
+            document.getElementById('edit-peso').value = record.peso || '';
+            document.getElementById('edit-volumen').value = record.volumen || '';
+            document.getElementById('edit-days').value = record.daysInWarehouse || '';
+            document.getElementById('edit-fecha-ingreso').value = record.fechaIngreso || '';
+            document.getElementById('edit-fecha-salida').value = record.fechaSalida || '';
+            document.getElementById('edit-tipo-anterior').value = record.tipoAnterior === '--' ? '' : record.tipoAnterior;
+            document.getElementById('edit-notas').value = record.notas || '';
+        }
+        function buildEditorRecord() {
+            const estado = document.getElementById('edit-estado').value;
+            const zona = document.getElementById('edit-zona').value;
+            const rack = document.getElementById('edit-rack').value;
+            const level = document.getElementById('edit-level').value;
+            const position = document.getElementById('edit-position').value;
+            const slotIndex = slotIndexFromPosition(position);
+            const status = document.getElementById('edit-status').value;
+            const sku = normalizeText(document.getElementById('edit-sku').value).toUpperCase();
+            const type = document.getElementById('edit-type').value;
+            const isVacant = status === 'Vacio' || type === 'vacio' || !sku;
+            if(isVacant) {
+                return normalizeInventoryRecord({
+                    ...createEmptyInventoryRecord(estado, zona, rack, level, position, slotIndex, inventoryStateName(estado)),
+                    fechaSalida: document.getElementById('edit-fecha-salida').value,
+                    tipoAnterior: normalizeText(document.getElementById('edit-tipo-anterior').value, 'caja'),
+                    notas: normalizeText(document.getElementById('edit-notas').value, 'Slot sin producto')
+                });
+            }
+            return normalizeInventoryRecord({
+                estado,
+                estadoNombre: inventoryStateName(estado),
+                zona,
+                rack,
+                level,
+                position,
+                slotIndex,
+                sku,
+                estadoStatus: 'Ocupado',
+                type,
+                contenido: document.getElementById('edit-contenido').value,
+                fechaIngreso: document.getElementById('edit-fecha-ingreso').value,
+                fechaSalida: document.getElementById('edit-fecha-salida').value,
+                tipoAnterior: document.getElementById('edit-tipo-anterior').value,
+                costo: document.getElementById('edit-costo').value,
+                peso: document.getElementById('edit-peso').value,
+                volumen: document.getElementById('edit-volumen').value,
+                unidad: document.getElementById('edit-unidad').value || '--',
+                daysInWarehouse: document.getElementById('edit-days').value,
+                notas: document.getElementById('edit-notas').value
+            });
+        }
+        window.renderInventoryManager = function() {
+            const table = document.getElementById('data-table');
+            const summary = document.getElementById('data-summary');
+            const count = document.getElementById('data-count');
+            if(!table || !summary || !count) return;
+            const search = normalizeText(document.getElementById('data-search')?.value || '').toUpperCase();
+            const stateFilter = document.getElementById('data-state-filter')?.value || 'all';
+            const statusFilter = document.getElementById('data-status-filter')?.value || 'all';
+            const filtered = inventoryRows.filter(row => {
+                const statusOk = statusFilter === 'all' || row.estadoStatus.toLowerCase() === statusFilter;
+                const stateOk = stateFilter === 'all' || row.estado === stateFilter;
+                const textOk = !search || [row.sku, row.estado, row.zona, row.rack, row.level, row.position, row.contenido].join(' ').toUpperCase().includes(search);
+                return statusOk && stateOk && textOk;
+            }).sort((a, b) => makeInventoryKey(a.estado, a.zona, a.rack, a.level, a.position).localeCompare(makeInventoryKey(b.estado, b.zona, b.rack, b.level, b.position)));
+            const occupied = inventoryRows.filter(row => row.estadoStatus === 'Ocupado');
+            const vacant = inventoryRows.length - occupied.length;
+            const totalValue = occupied.reduce((sum, row) => sum + numberOrZero(row.costo), 0);
+            summary.innerHTML = `
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-slate-800/70 rounded-lg px-2 py-2"><div class="text-[8px] text-slate-400 uppercase">Filas</div><div class="text-xs font-mono text-white">${inventoryRows.length}</div></div>
+                    <div class="bg-emerald-900/30 rounded-lg px-2 py-2"><div class="text-[8px] text-emerald-300 uppercase">Ocupados</div><div class="text-xs font-mono text-white">${occupied.length}</div></div>
+                    <div class="bg-amber-900/30 rounded-lg px-2 py-2"><div class="text-[8px] text-amber-300 uppercase">Vacios</div><div class="text-xs font-mono text-white">${vacant}</div></div>
+                </div>
+                <div class="mt-2 text-[10px] text-slate-400">Valor total inventario: <span class="text-emerald-300 font-mono">${formatter.format(totalValue)}</span></div>
+            `;
+            count.textContent = `${filtered.length} filas`;
+            table.innerHTML = filtered.slice(0, 80).map(row => {
+                const key = makeInventoryKey(row.estado, row.zona, row.rack, row.level, row.position);
+                const isVacant = row.estadoStatus === 'Vacio';
+                return `
+                    <button onclick="focusInventoryRecord('${key}')" class="w-full text-left bg-slate-800/70 hover:bg-slate-700/80 border border-slate-700 rounded-lg px-2 py-2 transition-colors">
+                        <div class="flex justify-between gap-2 items-start">
+                            <div>
+                                <div class="text-[10px] font-mono font-bold ${isVacant ? 'text-amber-300' : 'text-sky-300'}">${escapeHtml(isVacant ? 'VACIO' : row.sku)}</div>
+                                <div class="text-[9px] text-slate-400">${escapeHtml(`${row.estado} · ${row.zona} · ${row.rack} · ${row.level} · ${row.position}`)}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[9px] ${isVacant ? 'text-amber-300' : 'text-emerald-300'} font-bold">${escapeHtml(row.estadoStatus)}</div>
+                                <div class="text-[8px] text-slate-500">${escapeHtml(row.type)}</div>
+                            </div>
+                        </div>
+                        <div class="text-[9px] text-slate-300 mt-1 truncate">${escapeHtml(row.contenido || 'Sin descripcion')}</div>
+                    </button>
+                `;
+            }).join('');
+            if(filtered.length > 80) {
+                table.innerHTML += `<div class="text-[9px] text-slate-500 text-center py-2">Mostrando 80 de ${filtered.length} registros filtrados.</div>`;
+            }
+            if(!document.getElementById('edit-original-key').value && inventoryRows.length) loadRecordIntoEditor(inventoryRows[0]);
+        };
+        window.focusInventoryRecord = function(slotKey) {
+            const hitBox = slotMeshIndex.get(slotKey);
+            const record = inventoryIndex.get(slotKey);
+            if(record) loadRecordIntoEditor(record);
+            if(hitBox) {
+                document.getElementById('state-filter').value = hitBox.userData.estado;
+                document.getElementById('type-filter').value = 'all';
+                document.getElementById('local-zone-filter').value = 'all';
+                currentStateHub = hitBox.userData.estado;
+                aplicarFiltrosUI(false);
+                selectItem(hitBox);
+                focusContainer();
+            }
+        };
+        window.saveInventoryEditor = async function() {
+            const originalKey = document.getElementById('edit-original-key').value;
+            if(!originalKey) return;
+            const nextRecord = buildEditorRecord();
+            const targetKey = makeInventoryKey(nextRecord.estado, nextRecord.zona, nextRecord.rack, nextRecord.level, nextRecord.position);
+            const originalLocation = parseInventoryKey(originalKey);
+            const targetLocation = parseInventoryKey(targetKey);
+            const destinationRecord = inventoryIndex.get(targetKey) ? cloneRecord(inventoryIndex.get(targetKey)) : createEmptyInventoryRecord(targetLocation.estado, targetLocation.zona, targetLocation.rack, targetLocation.level, targetLocation.position, targetLocation.slotIndex, inventoryStateName(targetLocation.estado));
+            mutateSlotRecord(targetKey, nextRecord);
+            if(originalKey !== targetKey) {
+                if(destinationRecord.estadoStatus === 'Ocupado') {
+                    mutateSlotRecord(originalKey, { ...destinationRecord, ...originalLocation, estadoNombre: inventoryStateName(originalLocation.estado) });
+                } else {
+                    mutateSlotRecord(originalKey, createEmptyInventoryRecord(originalLocation.estado, originalLocation.zona, originalLocation.rack, originalLocation.level, originalLocation.position, originalLocation.slotIndex, inventoryStateName(originalLocation.estado)));
+                }
+            }
+            refreshSlotMesh(originalKey);
+            refreshSlotMesh(targetKey);
+            if(currentHeatmap !== 'none') toggleHeatmap(currentHeatmap);
+            aplicarFiltrosUI(false);
+            renderInventoryManager();
+            loadRecordIntoEditor(targetKey);
+            try {
+                if(inventorySourceMode === 'supabase' && hasSupabaseConfig()) {
+                    await pushInventoryRowToSupabase(nextRecord);
+                    if(originalKey !== targetKey) {
+                        if(destinationRecord.estadoStatus === 'Ocupado') {
+                            await pushInventoryRowToSupabase({ ...destinationRecord, ...originalLocation, estadoNombre: inventoryStateName(originalLocation.estado) });
+                        } else {
+                            await pushInventoryRowToSupabase(createEmptyInventoryRecord(originalLocation.estado, originalLocation.zona, originalLocation.rack, originalLocation.level, originalLocation.position, originalLocation.slotIndex, inventoryStateName(originalLocation.estado)));
+                        }
+                    }
+                    await pushAuditLogToSupabase(
+                        originalKey !== targetKey ? 'move_update' : 'update',
+                        targetKey,
+                        originalKey !== targetKey
+                            ? `Movimiento y actualizacion: ${originalKey} -> ${targetKey} (${nextRecord.sku || 'VACIO'})`
+                            : `Actualizacion de slot ${targetKey} (${nextRecord.sku || 'VACIO'})`,
+                        { before_slot: originalKey, after_slot: targetKey, record: nextRecord }
+                    );
+                    await loadAuditLogNow(true);
+                    setCsvStatus(`Cambios sincronizados en Supabase: ${nextRecord.estado} / ${nextRecord.rack} / ${nextRecord.position}.`, 'success');
+                } else {
+                    setCsvStatus(`Cambios aplicados en ${nextRecord.estado} / ${nextRecord.rack} / ${nextRecord.position}. Guarda el CSV para persistirlos.`, 'success');
+                }
+            } catch (error) {
+                setCsvStatus(`Se aplico el cambio local, pero no se pudo sincronizar con Supabase: ${error.message}`, 'warning');
+            }
+        };
+        window.clearInventorySlot = async function() {
+            const originalKey = document.getElementById('edit-original-key').value;
+            if(!originalKey) return;
+            const loc = parseInventoryKey(originalKey);
+            const emptyRecord = createEmptyInventoryRecord(loc.estado, loc.zona, loc.rack, loc.level, loc.position, loc.slotIndex, inventoryStateName(loc.estado));
+            mutateSlotRecord(originalKey, emptyRecord);
+            refreshSlotMesh(originalKey);
+            if(currentHeatmap !== 'none') toggleHeatmap(currentHeatmap);
+            aplicarFiltrosUI(false);
+            renderInventoryManager();
+            loadRecordIntoEditor(originalKey);
+            try {
+                if(inventorySourceMode === 'supabase' && hasSupabaseConfig()) {
+                    await pushInventoryRowToSupabase(emptyRecord);
+                    await pushAuditLogToSupabase(
+                        'clear_slot',
+                        originalKey,
+                        `Liberacion de slot ${originalKey}`,
+                        { slot_key: originalKey, record: emptyRecord }
+                    );
+                    await loadAuditLogNow(true);
+                    setCsvStatus(`Slot liberado y sincronizado: ${loc.estado} / ${loc.rack} / ${loc.position}.`, 'success');
+                } else {
+                    setCsvStatus(`Slot liberado: ${loc.estado} / ${loc.rack} / ${loc.position}.`, 'success');
+                }
+            } catch (error) {
+                setCsvStatus(`Slot liberado localmente, pero no se pudo sincronizar con Supabase: ${error.message}`, 'warning');
+            }
+        };
+        window.resetInventoryEditor = function() {
+            const key = document.getElementById('edit-original-key').value;
+            if(key && inventoryIndex.has(key)) loadRecordIntoEditor(key);
+        };
+        window.handleCsvInputChange = async function(event) {
+            const file = event.target.files && event.target.files[0];
+            if(!file) return;
+            inventoryFileHandle = null;
+            inventorySourceMode = 'csv';
+            updateSourceButtons();
+            applyInventoryDataset(parseInventoryCsv(await file.text()), file.name, false);
+            setCsvStatus(`CSV de respaldo importado: ${file.name}. Puedes migrarlo a Supabase cuando quieras.`, 'success');
+        };
+        function triggerCsvDownload(csvText, fileName) {
+            const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName || inventoryCsvFileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+        window.openCsvFile = async function() {
+            try {
+                if(window.showOpenFilePicker) {
+                    const [handle] = await window.showOpenFilePicker({
+                        types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }],
+                        multiple: false
+                    });
+                    inventoryFileHandle = handle;
+                    inventorySourceMode = 'csv';
+                    updateSourceButtons();
+                    stopSupabaseAutoRefresh();
+                    const file = await handle.getFile();
+                    applyInventoryDataset(parseInventoryCsv(await file.text()), handle.name || file.name, true);
+                    setCsvStatus(`Respaldo CSV cargado: ${handle.name || file.name}.`, 'success');
+                    return;
+                }
+            } catch (error) {
+                if(error && error.name === 'AbortError') return;
+            }
+            document.getElementById('csv-file-input').click();
+        };
+        window.saveCsvFile = async function() {
+            const csvText = serializeInventoryCsv(inventoryRows);
+            if(inventorySourceMode === 'supabase' || !inventoryFileHandle || !inventoryFileHandle.createWritable) {
+                triggerCsvDownload(csvText, inventorySourceName || inventoryCsvFileName);
+                setCsvStatus('Se genero un respaldo CSV del inventario actual.', 'success');
+                return;
+            }
+            try {
+                const writer = await inventoryFileHandle.createWritable();
+                await writer.write(csvText);
+                await writer.close();
+                setCsvStatus(`Respaldo CSV guardado directamente en ${inventorySourceName}.`, 'success');
+                return;
+            } catch (error) {
+                setCsvStatus(`No se pudo guardar sobre el archivo abierto. Se descargará una copia.`, 'warning');
+            }
+            triggerCsvDownload(csvText, inventorySourceName || inventoryCsvFileName);
+        };
+        window.downloadCsvFile = function() {
+            triggerCsvDownload(serializeInventoryCsv(inventoryRows), inventorySourceName || inventoryCsvFileName);
+            setCsvStatus('Se exporto una copia CSV del inventario actual.', 'info');
+        };
+
         const boxes = [];
 
         function buildLocalWarehouse(estado) {
@@ -875,10 +2123,10 @@
             pisoNave.receiveShadow = true; scene.add(pisoNave);
 
             // ── PAREDES LATERALES ALTAS ───────────────────────────────
-            const wallMat  = new THREE.MeshPhysicalMaterial({color:0xaaccee, metalness:.0, roughness:.0, transparent:true, opacity:.07, clearcoat:1.0, side:THREE.DoubleSide});
+            const wallMat  = new THREE.MeshPhysicalMaterial({color:0xaaccee, metalness:.0, roughness:.0, transparent:true, opacity:.04, clearcoat:1.0, side:THREE.DoubleSide});
             const panelMat = new THREE.MeshStandardMaterial({color:0x1e293b, metalness:.7, roughness:.3});
-            const trussMatS= new THREE.MeshStandardMaterial({color:0x334155, metalness:.85, roughness:.18});
-            const roofMat  = new THREE.MeshStandardMaterial({color:0xbbddff, metalness:.0, roughness:.0, transparent:true, opacity:.06, side:THREE.DoubleSide});
+            const trussMatS= new THREE.MeshStandardMaterial({color:0x475569, metalness:.55, roughness:.28, transparent:true, opacity:.16});
+            const roofMat  = new THREE.MeshStandardMaterial({color:0xd9f3ff, metalness:.0, roughness:.0, transparent:true, opacity:.025, side:THREE.DoubleSide});
 
             // Pared trasera
             const wallBack  = new THREE.Mesh(new THREE.BoxGeometry(160, WALL_H, 1), wallMat);
@@ -933,7 +2181,7 @@
                 const mesh = new THREE.Mesh(geo, roofMat);
                 // Centrar en el almacén
                 mesh.position.set(ex, 0, ez - ARCH_LEN/2);
-                mesh.castShadow = true;
+                mesh.castShadow = false;
                 scene.add(mesh);
 
                 // ── COSTILLAS DE LA BÓVEDA (arcos estructurales) ──────
@@ -951,7 +2199,7 @@
                     const ribGeo = new THREE.TubeGeometry(ribCurve, 32, 1.0, 8, false);
                     const rib = new THREE.Mesh(ribGeo, trussMatS);
                     rib.position.set(ex, 0, ez + dz);
-                    rib.castShadow = true;
+                    rib.castShadow = false;
                     scene.add(rib);
                 });
 
@@ -975,7 +2223,7 @@
 
                 // ── LUCERNARIO CENTRAL (claraboya) ─────────────────────
                 const skylightH = WALL_H + ARCH_H * 0.92;
-                const skylightMat = new THREE.MeshStandardMaterial({color:0xbbddff, transparent:true, opacity:.05, metalness:.0, roughness:.0});
+                const skylightMat = new THREE.MeshStandardMaterial({color:0xdff6ff, transparent:true, opacity:.02, metalness:.0, roughness:.0});
                 const skylight = new THREE.Mesh(new THREE.BoxGeometry(18, 1, ARCH_LEN * 0.7), skylightMat);
                 skylight.position.set(ex, skylightH, ez);
                 scene.add(skylight);
@@ -989,29 +2237,29 @@
             // (pilares eliminados — vista despejada)
 
             // ── LUMINARIAS LED COLGANTES (HIGHBAY) ───────────────────
-            const lightHousingMat = new THREE.MeshStandardMaterial({color:0x374151, metalness:.8, roughness:.2});
-            const lightPanelMat   = new THREE.MeshBasicMaterial({color:0xfffff0});
+            const lightHousingMat = new THREE.MeshStandardMaterial({color:0x475569, metalness:.7, roughness:.28, transparent:true, opacity:.82});
+            const lightPanelMat   = new THREE.MeshBasicMaterial({color:0xfffff0, transparent:true, opacity:.72});
             const cableMat        = new THREE.MeshStandardMaterial({color:0x111111, metalness:.9});
             const lightPositions  = [
-                [-50,-50],[-50,0],[-50,50],[0,-50],[0,0],[0,50],[50,-50],[50,0],[50,50]
+                [-52,-42],[-52,0],[-52,42],[0,-42],[0,42],[52,-42],[52,0],[52,42]
             ];
             lightPositions.forEach(([dx,dz]) => {
-                const cableLen = 12;
-                const mountY   = WALL_H + 8; // altura de montaje en la cuerda
+                const cableLen = 6.5;
+                const mountY   = WALL_H + 18;
                 // Cable
-                const cable = new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,cableLen,6), cableMat);
+                const cable = new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,cableLen,6), cableMat);
                 cable.position.set(ex+dx, mountY - cableLen/2, ez+dz); scene.add(cable);
                 // Reflector (campana)
-                const bellGeo = new THREE.CylinderGeometry(3.5, 1.5, 4, 16);
+                const bellGeo = new THREE.CylinderGeometry(2.2, 1.0, 2.6, 16);
                 const bell = new THREE.Mesh(bellGeo, lightHousingMat);
-                bell.position.set(ex+dx, mountY - cableLen - 2, ez+dz); scene.add(bell);
+                bell.position.set(ex+dx, mountY - cableLen - 1.3, ez+dz); scene.add(bell);
                 // Difusor
-                const diffuser = new THREE.Mesh(new THREE.CircleGeometry(1.5,14), lightPanelMat);
+                const diffuser = new THREE.Mesh(new THREE.CircleGeometry(1.15,14), lightPanelMat);
                 diffuser.rotation.x = Math.PI/2;
-                diffuser.position.set(ex+dx, mountY-cableLen-4, ez+dz); scene.add(diffuser);
+                diffuser.position.set(ex+dx, mountY-cableLen-2.45, ez+dz); scene.add(diffuser);
                 // Luz puntual
-                const ptLight = new THREE.PointLight(0xfff8e0, 0.45, 120);
-                ptLight.position.set(ex+dx, mountY-cableLen-5, ez+dz); scene.add(ptLight);
+                const ptLight = new THREE.PointLight(0xfff8e0, 0.32, 105);
+                ptLight.position.set(ex+dx, mountY-cableLen-3.1, ez+dz); scene.add(ptLight);
             });
 
             // ── ANDÉN DE CARGA 3D ─────────────────────────────────────
@@ -1077,12 +2325,7 @@
             hubLight.position.set(ex,30,ez+60); scene.add(hubLight);
 
             // ── RACKS ─────────────────────────────────────────────────
-            const zonas = [
-                { id:'ZONA A', startX:-45, startZ:-55, typePref:'caja'   },
-                { id:'ZONA B', startX: 25, startZ:-55, typePref:'mixto'  },
-                { id:'ZONA C', startX:-45, startZ:  5, typePref:'costal' },
-                { id:'ZONA D', startX: 25, startZ:  5, typePref:'bolsa'  }
-            ];
+            const zonas = inventoryZoneLayout;
             zonas.forEach(zona => {
                 const zCanvas=document.createElement('canvas'); zCanvas.width=512; zCanvas.height=128;
                 const zCtx=zCanvas.getContext('2d');
@@ -1118,65 +2361,33 @@
                                 brace.position.set(posX,6,localZ-4); brace.rotation.z=.3; scene.add(brace);
                                 const brace2=brace.clone(); brace2.position.set(posX,6,localZ+4); brace2.rotation.z=-.3; scene.add(brace2);
                             }
-                            [-2.5,0,2.5].forEach(zOff=>{
-                                const rand=Math.random(); let isEmpty=rand>0.8;
-                                let mesh;
-                                let userData={estado:estado.id,estadoNombre:estado.nombre,zona:zona.id,rack:`MOD-${r+1}${seg+1}`,level:`L-${l+1}`,costo:0,daysInWarehouse:0};
-                                if(isEmpty){
-                                    mesh=new THREE.Mesh(geoCaja,ghostMatInner);
-                                    mesh.add(new THREE.LineSegments(edgesGeoCaja,ghostMatEdge));
-                                    mesh.position.set(posX,shelfY+1.1,localZ+zOff);
-                                    const pastTime=Math.random()*100*24*60*60*1000;
-                                    userData.id='VACIO'; userData.estadoStatus='Vacio'; userData.type='vacio';
-                                    userData.tipoAnterior=Math.random()>.5?'caja':'costal';
-                                    userData.fechaIngreso='--'; userData.fechaSalida=new Date(Date.now()-pastTime).toISOString().split('T')[0];
-                                    userData.peso=0; userData.volumen=0; userData.unidad='--';
-                                    scene.add(mesh);
-                                    const hitBox=new THREE.Mesh(geoCaja,new THREE.MeshBasicMaterial({visible:false}));
-                                    hitBox.position.copy(mesh.position); hitBox.userData=userData; hitBox.userData.visualMesh=mesh;
-                                    hitBox.userData.originalMaterial=mesh.material;
-                                    scene.add(hitBox); boxes.push(hitBox);
-                                } else {
-                                    let type;
-                                    if(zona.typePref==='caja') type=rand>.1?'caja':'bolsa';
-                                    else if(zona.typePref==='costal') type=rand>.1?'costal':'caja';
-                                    else if(zona.typePref==='bolsa') type=rand>.1?'bolsa':'caja';
-                                    else { if(rand<.33) type='caja'; else if(rand<.66) type='costal'; else type='bolsa'; }
-                                    if(type==='caja') mesh=new THREE.Mesh(geoCaja,matCaja);
-                                    else if(type==='costal') mesh=new THREE.Mesh(geoCostal,matCostal);
-                                    else mesh=new THREE.Mesh(geoBolsa,matBolsa);
-                                    mesh.position.set(posX,shelfY+1.1,localZ+zOff);
-                                    if(type==='costal'||type==='bolsa') mesh.rotation.y=Math.random()*Math.PI;
-                                    mesh.castShadow=true; mesh.receiveShadow=true;
-                                    const cost=Math.floor(Math.random()*1000)+50;
-                                    const pastTime=Math.random()*180*24*60*60*1000;
-                                    const pastDate=new Date(Date.now()-pastTime);
-                                    const desc=skuDescriptores[type][Math.floor(Math.random()*skuDescriptores[type].length)];
-                                    const pesoVar=desc.pesoBase*(0.85+Math.random()*.3);
-                                    const volumen=type==='bolsa'?pesoVar*(0.8+Math.random()*.4):0;
-                                    userData.id=`${estado.id}-${zona.id.split(' ')[1]}${r+1}-${Math.floor(Math.random()*9000)+1000}`;
-                                    userData.estadoStatus='Ocupado'; userData.type=type;
-                                    userData.contenido=desc.contenido;
-                                    userData.fechaIngreso=pastDate.toISOString().split('T')[0];
-                                    userData.daysInWarehouse=Math.floor(pastTime/(1000*60*60*24));
-                                    userData.costo=cost;
-                                    userData.peso=parseFloat(pesoVar.toFixed(1));
-                                    userData.volumen=parseFloat(volumen.toFixed(1));
-                                    userData.unidad=desc.unidad;
-                                    mesh.userData=userData; mesh.userData.visualMesh=mesh;
-                                    scene.add(mesh);
-                                    const hitBox=new THREE.Mesh(geoCaja,new THREE.MeshBasicMaterial({visible:false}));
-                                    hitBox.position.copy(mesh.position); hitBox.userData=userData; hitBox.userData.visualMesh=mesh;
-                                    hitBox.userData.originalMaterial=mesh.material;
-                                    scene.add(hitBox); boxes.push(hitBox);
-                                }
+                            inventoryPositionOptions.forEach(position => {
+                                const rack = `MOD-${r+1}${seg+1}`;
+                                const level = `L-${l+1}`;
+                                const slotIndex = slotIndexFromPosition(position);
+                                const zOff = inventoryPositionOffset[position];
+                                const record = getInventoryRecordForSlot(estado.id, zona.id, rack, level, position, slotIndex, estado.nombre);
+                                const slotPosition = new THREE.Vector3(posX, shelfY + 1.1, localZ + zOff);
+                                const hitBox = new THREE.Mesh(geoCaja, new THREE.MeshBasicMaterial({ visible: false }));
+                                hitBox.position.copy(slotPosition);
+                                const slotKey = makeInventoryKey(estado.id, zona.id, rack, level, position);
+                                attachRecordToHitBox(hitBox, record);
+                                scene.add(hitBox);
+                                boxes.push(hitBox);
+                                slotMeshIndex.set(slotKey, hitBox);
                             });
                         }
                     }
                 }
             });
         }
-        estadosRed.forEach(est => buildLocalWarehouse(est));
+
+        async function initializeInventoryScene() {
+            await loadInitialInventoryData();
+            estadosRed.forEach(est => buildLocalWarehouse(est));
+            aplicarFiltrosUI(false);
+            renderInventoryManager();
+        }
 
         // =========================================================
         // INTELIGENCIA LOGÍSTICA: MAPAS DE CALOR Y PATHFINDING
@@ -1265,6 +2476,49 @@
                 btn.classList.add('active'); btn.innerHTML = '🧊 Vista 3D'; setTimeout(() => leafletMap && leafletMap.invalidateSize(), 100);
             } else {
                 mapDiv.style.zIndex = '0'; container.style.display = 'block'; btn.classList.remove('active'); btn.innerHTML = '🛰️ Satélite';
+            }
+        };
+
+        window.toggleRightPanel = function() {
+            const panel = document.getElementById('right-panel');
+            const body = document.getElementById('rp-body');
+            const btn = document.getElementById('btn-rp-collapse');
+            const titleWrap = document.getElementById('rp-title-wrap');
+            const header = document.getElementById('rp-header');
+            const actions = document.getElementById('rp-actions');
+            if(!panel || !body || !btn || !titleWrap || !header || !actions) return;
+
+            const collapsed = body.style.display === 'none';
+            if(collapsed) {
+                body.style.display = 'flex';
+                panel.style.width = '19rem';
+                panel.style.minWidth = '19rem';
+                panel.style.height = '';
+                panel.style.maxHeight = '96vh';
+                panel.style.alignSelf = 'flex-start';
+                titleWrap.style.display = '';
+                header.style.paddingLeft = '';
+                header.style.paddingRight = '';
+                header.classList.remove('justify-center');
+                header.classList.add('justify-between');
+                actions.classList.remove('w-full', 'justify-center');
+                btn.innerHTML = '▲';
+                btn.title = 'Colapsar';
+            } else {
+                body.style.display = 'none';
+                panel.style.width = '4.5rem';
+                panel.style.minWidth = '4.5rem';
+                panel.style.height = `${header.offsetHeight + 8}px`;
+                panel.style.maxHeight = `${header.offsetHeight + 8}px`;
+                panel.style.alignSelf = 'flex-start';
+                titleWrap.style.display = 'none';
+                header.style.paddingLeft = '0.5rem';
+                header.style.paddingRight = '0.5rem';
+                header.classList.remove('justify-between');
+                header.classList.add('justify-center');
+                actions.classList.add('w-full', 'justify-center');
+                btn.innerHTML = '▼';
+                btn.title = 'Expandir';
             }
         };
 
@@ -1423,12 +2677,13 @@
         setTimeout(() => aplicarFiltrosUI(false), 500);
 
         window.switchTab = function(tab) {
-            ['almacenes','rutas','distancias'].forEach(t => {
+            ['almacenes','rutas','distancias','datos'].forEach(t => {
                 document.getElementById(`tab-content-${t}`).classList.toggle('hidden', t !== tab); document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
                 if(t !== tab) document.getElementById(`tab-${t}`).classList.add('text-slate-400'); else document.getElementById(`tab-${t}`).classList.remove('text-slate-400');
             });
             if(tab === 'distancias') { renderMatrizDistancias(); actualizarDistanciasHub(); }
             if(tab === 'rutas') renderRutasFrecuentes();
+            if(tab === 'datos') renderInventoryManager();
         };
 
         const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2(); let selectedBox = null; let originalMaterial = null;
@@ -1449,12 +2704,14 @@
         let _fkSyncing    = false;      // true = animate loop mueve el item con las horquillas
         let _fkItemMesh   = null;       // referencia permanente al item
         let _fkItemOrigin = null;       // posición original en el rack
+        let _fkItemOriginRot = null;
         let _fkBusy       = false;
         let _fkActive     = false;
         let _fkBasePos    = null;       // posición andén
         let _fkTargetBox  = null;
         let _fkTargetEst  = null;
         let _fkTruckPos   = null;       // posición de carga del camión
+        let _fkTruckCargoPos = null;
 
         // ── BUILD FORKLIFT ──────────────────────────────────
         function buildForklift() {
@@ -1721,6 +2978,11 @@
             const mRedD  = new THREE.MeshStandardMaterial({color:0x991a00, metalness:.7,  roughness:.3});
             const mWht   = new THREE.MeshStandardMaterial({color:0xeeeeee, metalness:.35, roughness:.55});
             const mWhtD  = new THREE.MeshStandardMaterial({color:0xd4d4d4, metalness:.3,  roughness:.6});
+            const mCabBody = new THREE.MeshStandardMaterial({color:0xf4f7fb, metalness:.28, roughness:.52});
+            const mCabAccent = new THREE.MeshStandardMaterial({color:0x2f3b4a, metalness:.62, roughness:.3});
+            const mCabTrim = new THREE.MeshStandardMaterial({color:0x121822, metalness:.78, roughness:.18});
+            const mTrailerWall = new THREE.MeshPhysicalMaterial({color:0xeaf4ff, transparent:true, opacity:.08, roughness:.08, metalness:.05, transmission:.08});
+            const mTrailerFrame= new THREE.MeshStandardMaterial({color:0xcbd5e1, metalness:.45, roughness:.4, transparent:true, opacity:.22});
             const mBk    = new THREE.MeshStandardMaterial({color:0x111111, metalness:.85, roughness:.15});
             const mGr    = new THREE.MeshStandardMaterial({color:0x252535, metalness:.55, roughness:.4});
             const mGrL   = new THREE.MeshStandardMaterial({color:0x3f3f55, metalness:.5,  roughness:.45});
@@ -1746,81 +3008,62 @@
                 cross.position.set(x, 1.5, 0); g.add(cross);
             });
 
-            // ──── CABINA REDISEÑADA (TRACTOR) ────────────────────
-            // Cuerpo bajo de la cabina
-            const cabLow = new THREE.Mesh(new THREE.BoxGeometry(15, 8, 13.5), mRed);
-            cabLow.position.set(-12, 5, 0); cabLow.castShadow = true; g.add(cabLow);
-            // Cuerpo alto (zona de ventanas — más estrecho en Z para dar forma)
-            const cabUp = new THREE.Mesh(new THREE.BoxGeometry(13, 6, 12), mRed);
-            cabUp.position.set(-12, 11, 0); cabUp.castShadow = true; g.add(cabUp);
-            // Techo plano con visera delantera
-            const roofCab = new THREE.Mesh(new THREE.BoxGeometry(14, 1.0, 12.5), mRedD);
-            roofCab.position.set(-12, 14.1, 0); g.add(roofCab);
-            const roofVisor = new THREE.Mesh(new THREE.BoxGeometry(3, .4, 12.5), mRedD);
-            roofVisor.position.set(-19, 13.8, 0); roofVisor.rotation.z = -.12; g.add(roofVisor);
-            // Spoiler aerodinámico en techo (deflector)
-            const deflector = new THREE.Mesh(new THREE.BoxGeometry(2.5, 4.5, 13), mRed);
-            deflector.position.set(-5.5, 16, 0); deflector.rotation.z = .1; g.add(deflector);
-            const deflTop = new THREE.Mesh(new THREE.BoxGeometry(3, .6, 13.5), mRedD);
-            deflTop.position.set(-5.5, 18.3, 0); g.add(deflTop);
-            // Pilares A (entre parabrisas y puerta) — negros
-            [-6.5, 6.5].forEach(z => {
-                const pA = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7, .8), mBk);
-                pA.position.set(-18.2, 11, z); pA.rotation.z=-.12; g.add(pA);
+            // ──── CABINA NUEVA (TRACTOCAMIÓN AERODINÁMICO) ────────────────────
+            const cabBase = new THREE.Mesh(new THREE.BoxGeometry(14, 7.2, 12.8), mCabBody);
+            cabBase.position.set(-12.4, 5.1, 0); cabBase.castShadow = true; g.add(cabBase);
+            const cabUpper = new THREE.Mesh(new THREE.BoxGeometry(11.2, 6.1, 11.2), mCabBody);
+            cabUpper.position.set(-11.2, 10.9, 0); cabUpper.castShadow = true; g.add(cabUpper);
+            const cabBrow = new THREE.Mesh(new THREE.BoxGeometry(10.4, 1.1, 11.5), mCabAccent);
+            cabBrow.position.set(-15.9, 13.1, 0); cabBrow.rotation.z = -.16; g.add(cabBrow);
+            const nose = new THREE.Mesh(new THREE.BoxGeometry(6.5, 5.5, 10.8), mCabAccent);
+            nose.position.set(-20.6, 4.3, 0); nose.castShadow = true; g.add(nose);
+            const noseSlope = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.6, 10.8), mCabAccent);
+            noseSlope.position.set(-17.9, 8.3, 0); noseSlope.rotation.z = .32; g.add(noseSlope);
+            const sleeper = new THREE.Mesh(new THREE.BoxGeometry(5.2, 9.8, 12.4), mCabAccent);
+            sleeper.position.set(-4.7, 8.7, 0); sleeper.castShadow = true; g.add(sleeper);
+            const sleeperTop = new THREE.Mesh(new THREE.BoxGeometry(5.6, .7, 12.8), mCabTrim);
+            sleeperTop.position.set(-4.7, 13.8, 0); g.add(sleeperTop);
+            [-5.9, 5.9].forEach(z => {
+                const pA = new THREE.Mesh(new THREE.BoxGeometry(1.0, 6.6, .65), mCabTrim);
+                pA.position.set(-17.3, 10.3, z); pA.rotation.z = -.16; g.add(pA);
             });
-            // Pilares B (traseros)
-            [-6, 6].forEach(z => {
-                const pB = new THREE.Mesh(new THREE.BoxGeometry(.9, 7.5, .8), mBk);
-                pB.position.set(-6, 11, z); g.add(pB);
+            [-5.5, 5.5].forEach(z => {
+                const pB = new THREE.Mesh(new THREE.BoxGeometry(.75, 7.0, .6), mCabTrim);
+                pB.position.set(-7.2, 10.6, z); g.add(pB);
             });
-            // Pechera delantera baja (bumper integrado al cuerpo)
-            const pechera = new THREE.Mesh(new THREE.BoxGeometry(2, 9, 13.5), mRedD);
-            pechera.position.set(-19.5, 5, 0); g.add(pechera);
-            // Capó (hood) delantero — más alto y aerodinámico
-            const hood = new THREE.Mesh(new THREE.BoxGeometry(5, 8, 12), mRed);
-            hood.position.set(-22, 5.5, 0); hood.castShadow = true; g.add(hood);
-            // Rampa del capó (inclinada hacia adelante)
-            const hoodSlope = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.8, 12), mRedD);
-            hoodSlope.position.set(-19.2, 10.5, 0); hoodSlope.rotation.z = .42; g.add(hoodSlope);
-            // Rejilla delantera
-            const grille = new THREE.Mesh(new THREE.BoxGeometry(.4, 5, 8), mBk);
-            grille.position.set(-24.1, 4, 0); g.add(grille);
+            const grille = new THREE.Mesh(new THREE.BoxGeometry(.45, 4.4, 8.2), mCabTrim);
+            grille.position.set(-24.0, 4.0, 0); g.add(grille);
             for(let i=-3; i<=3; i+=1) {
                 const bar = new THREE.Mesh(new THREE.BoxGeometry(.5, .25, 8.1), mChrom);
                 bar.position.set(-24.05, 4 + i*.65, 0); g.add(bar);
             }
-            // Logo (placa cromada)
             const logo = new THREE.Mesh(new THREE.BoxGeometry(.15, 1.8, 3.5), mChrom);
             logo.position.set(-24.12, 5, 0); g.add(logo);
-            // Parabrisas (inclinado)
-            const windshield = new THREE.Mesh(new THREE.BoxGeometry(16.1, 7, .1), mGlass);
-            windshield.position.set(-12, 10, -7.05); windshield.rotation.y = .05; g.add(windshield);
-            windshield.clone().position.set(-12, 10, 7.05); g.add(windshield.clone());
-            // Parabrisas frontal principal
-            const frontWS = new THREE.Mesh(new THREE.BoxGeometry(.1, 7, 12), mGlass);
-            frontWS.position.set(-19.9, 10, 0); g.add(frontWS);
-            // Marco del parabrisas
-            const wsFrame = new THREE.Mesh(new THREE.BoxGeometry(16.2, .4, .2), mBk);
-            wsFrame.position.set(-12, 13.9, -7.0); g.add(wsFrame);
-            // Puerta del conductor (izquierda)
+            const frontWS = new THREE.Mesh(new THREE.BoxGeometry(.15, 5.8, 10.6), mGlass);
+            frontWS.position.set(-18.4, 10.2, 0); frontWS.rotation.z = -.16; g.add(frontWS);
+            const windshield = new THREE.Mesh(new THREE.BoxGeometry(10.8, 5.2, .12), mGlassDk);
+            windshield.position.set(-12.8, 10.3, -6.5); windshield.rotation.y = .08; g.add(windshield);
+            const windshieldR = windshield.clone();
+            windshieldR.position.set(-12.8, 10.3, 6.5); g.add(windshieldR);
+            const wsCap = new THREE.Mesh(new THREE.BoxGeometry(10.4, .5, 10.8), mCabTrim);
+            wsCap.position.set(-14.9, 12.9, 0); wsCap.rotation.z = -.16; g.add(wsCap);
             [-7, 7].forEach((z,i) => {
-                const door = new THREE.Mesh(new THREE.BoxGeometry(9, 11, .35), mRed);
-                door.position.set(-11, 6.6, z+(i===0?-.15:.15)); g.add(door);
+                const door = new THREE.Mesh(new THREE.BoxGeometry(8.8, 10.4, .35), mCabBody);
+                door.position.set(-11.2, 6.4, z+(i===0?-.15:.15)); g.add(door);
                 const winDoor = new THREE.Mesh(new THREE.BoxGeometry(7, 4.5, .18), mGlassDk);
-                winDoor.position.set(-11, 11, z+(i===0?-.08:.08)); g.add(winDoor);
-                const winFrame = new THREE.Mesh(new THREE.BoxGeometry(7.3, .35, .2), mBk);
-                winFrame.position.set(-11, 13, z+(i===0?-.05:.05)); g.add(winFrame);
+                winDoor.position.set(-11.2, 10.7, z+(i===0?-.08:.08)); g.add(winDoor);
+                const winFrame = new THREE.Mesh(new THREE.BoxGeometry(7.3, .35, .2), mCabTrim);
+                winFrame.position.set(-11.2, 12.7, z+(i===0?-.05:.05)); g.add(winFrame);
                 const handle = new THREE.Mesh(new THREE.BoxGeometry(1.8, .35, .5), mChrom);
-                handle.position.set(-10, 7.5, z+(i===0?-.5:.5)); g.add(handle);
+                handle.position.set(-10.1, 7.4, z+(i===0?-.5:.5)); g.add(handle);
             });
-            // Espejos retrovisores
             [-7.2, 7.2].forEach(z => {
                 const arm = new THREE.Mesh(new THREE.BoxGeometry(.4, .4, 3), mBk);
-                arm.position.set(-13, 11.5, z+(z<0?-1.5:1.5)); g.add(arm);
+                arm.position.set(-14.2, 11.6, z+(z<0?-1.5:1.5)); g.add(arm);
                 const mirror = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.5, .25), mGlassDk);
-                mirror.position.set(-13, 11.5, z+(z<0?-3:3)); g.add(mirror);
-                const mFrame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.7, .15), mBk);
-                mFrame.position.set(-13, 11.5, z+(z<0?-3.08:3.08)); g.add(mFrame);
+                mirror.position.set(-14.2, 11.6, z+(z<0?-3:3)); g.add(mirror);
+                const mFrame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.7, .15), mCabTrim);
+                mFrame.position.set(-14.2, 11.6, z+(z<0?-3.08:3.08)); g.add(mFrame);
             });
             // Faros delanteros (dobles)
             [-5,-1.5,1.5,5].forEach(z => {
@@ -1868,69 +3111,95 @@
 
             // ──── CAJA DE CARGA (TRAILER) ─────────────────────────
             // Cuerpo principal
-            const box = new THREE.Mesh(new THREE.BoxGeometry(30, 14, 15), mWht);
-            box.position.set(13, 9, 0); box.castShadow = true; g.add(box);
+            const trailerLeft = new THREE.Mesh(new THREE.BoxGeometry(30, 4.6, .28), mTrailerWall);
+            trailerLeft.position.set(13, 5.0, -7.35); g.add(trailerLeft);
+            const trailerRight = trailerLeft.clone();
+            trailerRight.position.set(13, 5.0, 7.35); g.add(trailerRight);
+            const trailerFront = new THREE.Mesh(new THREE.BoxGeometry(.35, 5.2, 15), mTrailerWall);
+            trailerFront.position.set(-1.9, 5.3, 0); g.add(trailerFront);
             // Techo del tráiler
-            const trailRoof = new THREE.Mesh(new THREE.BoxGeometry(30.2, .6, 15.2), mWhtD);
-            trailRoof.position.set(13, 16.3, 0); g.add(trailRoof);
+            const trailRoof = new THREE.Mesh(new THREE.BoxGeometry(30.2, .35, 15.2), mTrailerWall);
+            trailRoof.position.set(13, 16.1, 0); trailRoof.visible = false; g.add(trailRoof);
+            const roofRail = new THREE.Mesh(new THREE.BoxGeometry(30.4, .22, .35), mTrailerFrame);
+            roofRail.position.set(13, 15.95, -7.45); roofRail.visible = false; g.add(roofRail);
+            const roofRailR = roofRail.clone();
+            roofRailR.position.set(13, 15.95, 7.45); roofRailR.visible = false; g.add(roofRailR);
             // Suelo del tráiler
             const trailFloor = new THREE.Mesh(new THREE.BoxGeometry(29.5, .6, 14.5), mGr);
             trailFloor.position.set(13, 2.3, 0); g.add(trailFloor);
             // Franja lateral (stripe)
-            const stripe = new THREE.Mesh(new THREE.BoxGeometry(30, 1.5, 15.1), mRed);
-            stripe.position.set(13, 4.2, 0); g.add(stripe);
-            const stripeTop = new THREE.Mesh(new THREE.BoxGeometry(30, .6, 15.1), mRedD);
-            stripeTop.position.set(13, 15.8, 0); g.add(stripeTop);
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(30, 1.1, .22), mRed);
+            stripe.position.set(13, 3.8, -7.28); g.add(stripe);
+            const stripeR = stripe.clone();
+            stripeR.position.set(13, 3.8, 7.28); g.add(stripeR);
+            const stripeTop = new THREE.Mesh(new THREE.BoxGeometry(30, .4, .2), mRedD);
+            stripeTop.position.set(13, 14.95, -7.3); g.add(stripeTop);
+            const stripeTopR = stripeTop.clone();
+            stripeTopR.position.set(13, 14.95, 7.3); g.add(stripeTopR);
             // Frisos laterales
             [-3, 2, 7, 12, 17, 22].forEach(x => {
-                const rib = new THREE.Mesh(new THREE.BoxGeometry(.4, 14, 15.05), mWhtD);
-                rib.position.set(x-1, 9, 0); g.add(rib);
+                const rib = new THREE.Mesh(new THREE.BoxGeometry(.28, 4.6, .28), mTrailerFrame);
+                rib.position.set(x-1, 5.0, -7.35); g.add(rib);
+                const ribR = rib.clone();
+                ribR.position.set(x-1, 5.0, 7.35); g.add(ribR);
+            });
+            [-7.2, 7.2].forEach(z => {
+                const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(30.2, .25, .25), mTrailerFrame);
+                bottomRail.position.set(13, 2.9, z); g.add(bottomRail);
             });
             // Listones del piso de carga (para realismo)
             for(let i=0; i<15; i++) {
                 const plank = new THREE.Mesh(new THREE.BoxGeometry(29, .15, .9), new THREE.MeshStandardMaterial({color:0x8B6914, roughness:.9, metalness:.0}));
                 plank.position.set(13, 2.65, -6.5 + i); g.add(plank);
             }
+            [[21.8, -3.4], [20.8, 0], [19.8, 3.4]].forEach(([x, z]) => {
+                const pallet = new THREE.Mesh(new THREE.BoxGeometry(3.2, .32, 3.6), new THREE.MeshStandardMaterial({color:0x8b5a2b, roughness:.95}));
+                pallet.position.set(x, 2.95, z); g.add(pallet);
+                [-1.05, 0, 1.05].forEach(dx => {
+                    const runner = new THREE.Mesh(new THREE.BoxGeometry(.24, .22, 3.5), new THREE.MeshStandardMaterial({color:0x6b4423, roughness:.98}));
+                    runner.position.set(x + dx, 2.67, z); g.add(runner);
+                });
+            });
 
             // ──── PUERTAS TRASERAS (con bisagras y manijas) ──────
             // Grupo izquierdo y derecho para animación
             const doorGroupL = new THREE.Group();
-            doorGroupL.position.set(27.9, 9, -3.5); // pivote en la bisagra
+            doorGroupL.position.set(27.9, 5.1, -3.5); // pivote en la bisagra
             g.add(doorGroupL);
             const doorGroupR = new THREE.Group();
-            doorGroupR.position.set(27.9, 9, 3.5);
+            doorGroupR.position.set(27.9, 5.1, 3.5);
             g.add(doorGroupR);
 
             // Panel de puerta izquierda
-            const doorPanelL = new THREE.Mesh(new THREE.BoxGeometry(.35, 13.8, 7.4), mWht);
+            const doorPanelL = new THREE.Mesh(new THREE.BoxGeometry(.35, 4.8, 7.4), mTrailerWall);
             doorPanelL.position.set(.15, 0, -3.7); doorGroupL.add(doorPanelL);
             // Panel de puerta derecha
-            const doorPanelR = new THREE.Mesh(new THREE.BoxGeometry(.35, 13.8, 7.4), mWht);
+            const doorPanelR = new THREE.Mesh(new THREE.BoxGeometry(.35, 4.8, 7.4), mTrailerWall);
             doorPanelR.position.set(.15, 0, 3.7); doorGroupR.add(doorPanelR);
 
             // Nervaduras de las puertas
             [-2, 0, 2].forEach(dz => {
-                const rib = new THREE.Mesh(new THREE.BoxGeometry(.38, 13.6, .6), mWhtD);
+                const rib = new THREE.Mesh(new THREE.BoxGeometry(.38, 4.6, .6), mTrailerFrame);
                 rib.position.set(.18, 0, dz - 3.7); doorGroupL.add(rib);
                 const ribR = rib.clone(); ribR.position.set(.18, 0, dz + 3.7); doorGroupR.add(ribR);
             });
             // Gomas de sellado (perimeter seal)
-            const sealL = new THREE.Mesh(new THREE.BoxGeometry(.2, 14, .25), mRubber);
+            const sealL = new THREE.Mesh(new THREE.BoxGeometry(.2, 4.9, .25), mRubber);
             sealL.position.set(.0, 0, 0); doorGroupL.add(sealL);
             const sealR = sealL.clone(); doorGroupR.add(sealR);
 
             // Manijas (latch bars)
-            const latchL = new THREE.Mesh(new THREE.BoxGeometry(.8, 7, .55), mChrom);
+            const latchL = new THREE.Mesh(new THREE.BoxGeometry(.8, 3.2, .55), mChrom);
             latchL.position.set(.6, 0, -.2); doorGroupL.add(latchL);
             const latchLH1 = new THREE.Mesh(new THREE.BoxGeometry(.8, .45, 2.5), mChrom);
-            latchLH1.position.set(.6, 3, -1); doorGroupL.add(latchLH1);
-            const latchLH2 = latchLH1.clone(); latchLH2.position.set(.6, -3, -1); doorGroupL.add(latchLH2);
+            latchLH1.position.set(.6, 1.5, -1); doorGroupL.add(latchLH1);
+            const latchLH2 = latchLH1.clone(); latchLH2.position.set(.6, -1.5, -1); doorGroupL.add(latchLH2);
             const latchR = latchL.clone(); latchR.position.set(.6, 0, .2); doorGroupR.add(latchR);
-            const latchRH1 = latchLH1.clone(); latchRH1.position.set(.6, 3, 1); doorGroupR.add(latchRH1);
-            const latchRH2 = latchLH2.clone(); latchRH2.position.set(.6, -3, 1); doorGroupR.add(latchRH2);
+            const latchRH1 = latchLH1.clone(); latchRH1.position.set(.6, 1.5, 1); doorGroupR.add(latchRH1);
+            const latchRH2 = latchLH2.clone(); latchRH2.position.set(.6, -1.5, 1); doorGroupR.add(latchRH2);
 
             // Bisagras
-            [5, 0, -5].forEach(y => {
+            [1.8, 0, -1.8].forEach(y => {
                 const hingeL = new THREE.Mesh(new THREE.BoxGeometry(.5, .8, .8), mChrom);
                 hingeL.position.set(.05, y, .0); doorGroupL.add(hingeL);
                 const hingeR = hingeL.clone(); doorGroupR.add(hingeR);
@@ -1967,10 +3236,10 @@
 
             const axlePositions = [
                 [-20,2.6,7], [-20,2.6,-7],
-                [-10,2.6,7], [-10,2.6,-7],
-                [4,2.6,7],   [4,2.6,-7],
-                [12,2.6,7],  [12,2.6,-7],
-                [20,2.6,7],  [20,2.6,-7],
+                [-8,2.6,7],  [-8,2.6,-7],
+                [16,2.6,7],  [16,2.6,-7],
+                [21,2.6,7],  [21,2.6,-7],
+                [25,2.6,7],  [25,2.6,-7],
             ];
             axlePositions.forEach(([x,y,z]) => {
                 const wg = new THREE.Group();
@@ -1989,11 +3258,13 @@
                     wg.add(nut);
                 }
                 wg.position.set(x, y, z); g.add(wg);
-                const mud = new THREE.Mesh(new THREE.BoxGeometry(6, .6, 3.5), mBk);
-                mud.position.set(x, y+3.2, z); g.add(mud);
+                if(x <= -8 || x >= 16) {
+                    const mud = new THREE.Mesh(new THREE.BoxGeometry(4.6, .45, 3.0), mBk);
+                    mud.position.set(x, y+3.05, z); g.add(mud);
+                }
             });
             // Ejes (barras entre ruedas)
-            [-20,-10,4,12,20].forEach(x => {
+            [-20,-8,16,21,25].forEach(x => {
                 const axle = new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,16,10), mGr);
                 axle.rotation.z = Math.PI/2; axle.position.set(x, 2.6, 0); g.add(axle);
             });
@@ -2001,6 +3272,11 @@
             // ── META-DATOS para la operación ───────────────────────
             g.userData.loadFloorY = 2.6; // Y del piso del tráiler (en escala local)
             g.userData.loadX      = 13;  // centro X de la caja
+            g.userData.loadSlots  = [
+                new THREE.Vector3(21.8, 2.95, -3.4),
+                new THREE.Vector3(20.8, 2.95, 0),
+                new THREE.Vector3(19.8, 2.95, 3.4)
+            ];
             // Referencias a puertas para animación
             g.userData.doorGroupL = doorGroupL;
             g.userData.doorGroupR = doorGroupR;
@@ -2020,13 +3296,26 @@
             const dL = truckMesh.userData.doorGroupL;
             const dR = truckMesh.userData.doorGroupR;
             if(!dL || !dR) { if(cb) cb(); return; }
-            const targetRotL = open ?  Math.PI*0.78 : 0;
-            const targetRotR = open ? -Math.PI*0.78 : 0;
+            const targetRotL = open ?  Math.PI*0.92 : 0;
+            const targetRotR = open ? -Math.PI*0.92 : 0;
             let done = 0;
             const onDone = () => { done++; if(done>=2 && cb) cb(); };
             new TWEEN.Tween(dL.rotation).to({y: targetRotL}, 600).easing(TWEEN.Easing.Quadratic.InOut).onComplete(onDone).start();
             new TWEEN.Tween(dR.rotation).to({y: targetRotR}, 600).easing(TWEEN.Easing.Quadratic.InOut).onComplete(onDone).start();
             truckMesh.userData.doorsOpen = open;
+        }
+
+        function getTruckCargoTarget(slotIndex = 0, mesh = null) {
+            if(!truckMesh) return new THREE.Vector3();
+            const slots = truckMesh.userData.loadSlots || [new THREE.Vector3(truckMesh.userData.loadX || 13, 3.7, 0)];
+            const slot = slots[Math.max(0, Math.min(slotIndex, slots.length - 1))].clone();
+            if(mesh) {
+                const box = new THREE.Box3().setFromObject(mesh);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                slot.y += Math.max(.25, size.y * 0.5) + .02;
+            }
+            return truckMesh.localToWorld(slot);
         }
 
         forkliftMesh = buildForklift();
@@ -2108,9 +3397,14 @@
 
         function fkMove(to, dur, cb) {
             const ang=Math.atan2(to.x-forkliftMesh.position.x, to.z-forkliftMesh.position.z);
-            new TWEEN.Tween(forkliftMesh.rotation).to({y:ang},Math.min(280,dur*.35)).start();
-            new TWEEN.Tween(forkliftMesh.position).to({x:to.x,z:to.z},dur)
-                .easing(TWEEN.Easing.Cubic.Out).onComplete(cb||(()=>{})).start();
+            new TWEEN.Tween(forkliftMesh.rotation)
+                .to({y:ang}, Math.min(320, dur*.32))
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onComplete(() => {
+                    new TWEEN.Tween(forkliftMesh.position).to({x:to.x,z:to.z}, dur)
+                        .easing(TWEEN.Easing.Cubic.Out).onComplete(cb||(()=>{})).start();
+                })
+                .start();
         }
 
         function fkFork(tY, dur, cb) {
@@ -2118,11 +3412,29 @@
                 .to({y:tY},dur).easing(TWEEN.Easing.Quadratic.InOut)
                 .onComplete(cb||(()=>{})).start();
         }
+        function getForkCarryTarget() {
+            const fg = forkliftMesh.userData.forkGroup;
+            const wp = new THREE.Vector3();
+            fg.getWorldPosition(wp);
+            return new THREE.Vector3(wp.x, wp.y + 1.35, wp.z + 2.15);
+        }
+        function fkTransferToFork(mesh, cb) {
+            const target = getForkCarryTarget();
+            new TWEEN.Tween(mesh.position)
+                .to({x:target.x, y:target.y, z:target.z}, 260)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .onComplete(() => {
+                    fkGrab(mesh);
+                    if(cb) cb();
+                })
+                .start();
+        }
 
         // Adjuntar/soltar item de las horquillas
         function fkGrab(mesh) {
             _fkCarrying = mesh;
             _fkSyncing  = true;
+            new TWEEN.Tween(mesh.rotation).to({x:0,y:mesh.rotation.y,z:0},220).easing(TWEEN.Easing.Quadratic.Out).start();
         }
         function fkRelease(targetPos, cb) {
             _fkSyncing = false;
@@ -2130,9 +3442,15 @@
             const m = _fkCarrying;
             _fkCarrying = null;
             new TWEEN.Tween(m.position)
-                .to({x:targetPos.x, y:targetPos.y, z:targetPos.z}, 350)
+                .to({x:targetPos.x, y:targetPos.y + 0.22, z:targetPos.z}, 280)
                 .easing(TWEEN.Easing.Quadratic.Out)
-                .onComplete(cb||(()=>{}))
+                .onComplete(() => {
+                    new TWEEN.Tween(m.position)
+                        .to({y:targetPos.y}, 150)
+                        .easing(TWEEN.Easing.Cubic.Out)
+                        .onComplete(cb||(()=>{}))
+                        .start();
+                })
                 .start();
         }
 
@@ -2140,29 +3458,20 @@
         function iniciarOperacionForklift() {
             if(!_fkTargetBox||!_fkTargetEst||_fkBusy) return;
             _fkBusy=true; actualizarBtnForklift('busy');
-
             const boxPos=new THREE.Vector3();
             _fkTargetBox.getWorldPosition(boxPos);
             const sp  = _fkTargetEst;
             const anden = {x:sp.x, z:sp.z+115};
             _fkBasePos  = anden;
-
-            // Guardar referencia permanente al item
             _fkItemMesh   = _fkTargetBox.userData.visualMesh;
             _fkItemOrigin = _fkItemMesh.position.clone();
-
-            // Posicionar y mostrar camión en el andén
+            _fkItemOriginRot = _fkItemMesh.rotation.clone();
             const truckX = anden.x + 12;
             const truckZ = anden.z + 8;
-            _fkTruckPos  = {
-                x: truckX + truckMesh.userData.loadX * 1.2,
-                y: truckMesh.userData.loadFloorY * 1.2 + 1,
-                z: truckZ
-            };
             truckMesh.position.set(truckX, 0, truckZ);
             truckMesh.visible = true;
-
-            // Ruta punteada
+            _fkTruckPos = truckMesh.localToWorld(new THREE.Vector3(25.6, 4.0, 0));
+            _fkTruckCargoPos = getTruckCargoTarget(1, _fkItemMesh);
             if(activeRouteLine){scene.remove(activeRouteLine);activeRouteLine=null;}
             const pts=[
                 new THREE.Vector3(anden.x,.5,anden.z),
@@ -2172,104 +3481,61 @@
             const rm=new THREE.LineDashedMaterial({color:0xf59e0b,dashSize:3,gapSize:1.5,transparent:true,opacity:.7});
             activeRouteLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),rm);
             activeRouteLine.computeLineDistances(); scene.add(activeRouteLine);
-
-            // Aparecer en el andén
             forkliftMesh.visible=true;
             forkliftMesh.position.set(anden.x,0,anden.z);
             forkliftMesh.userData.forkGroup.position.y=1.2;
             forkliftLight.intensity=2.5;
-
-            const aisleZ  = boxPos.z - 9;
-            const enterZ  = boxPos.z + 1.5;
+            const aisleZ  = boxPos.z - 10.5;
+            const rackFaceZ = boxPos.z - 3.6;
             const forkLiftY = Math.max(1.2,(boxPos.y-1.2)/forkliftMesh.scale.y);
-            const travelY   = 2.0;
-
-            // 1 — Ir al pasillo frente al rack
-            setFkStatus('⟶ Avanzando al pasillo...');
+            const travelY   = 2.25;
+            setFkStatus('Avanzando al pasillo...');
             fkMove({x:sp.x, z:aisleZ}, 1200, ()=>{
-
-                // 2 — Alinear lateralmente en el pasillo
-                setFkStatus('⟶ Alineando con rack...');
+                setFkStatus('Alineando con rack...');
                 fkMove({x:boxPos.x, z:aisleZ}, 650, ()=>{
-
-                    // 3 — Subir horquillas al nivel correcto (en el pasillo, fuera del rack)
                     const lvl = forkLiftY>5?'L-3 (alto)':forkLiftY>2.5?'L-2 (medio)':'L-1 (bajo)';
-                    setFkStatus('↑ Subiendo a '+lvl+'...');
+                    setFkStatus('Subiendo a '+lvl+'...');
                     fkFork(forkLiftY, 600, ()=>{
-
-                        // 4 — Entrar horizontalmente al rack con horquillas en nivel
-                        setFkStatus('⟶ Insertando horquillas...');
-                        fkMove({x:boxPos.x, z:enterZ}, 420, ()=>{
-
-                            // 5 — Levantar para despegar del estante
-                            setFkStatus('🔒 Sujetando carga...');
+                        setFkStatus('Insertando horquillas...');
+                        fkMove({x:boxPos.x, z:rackFaceZ}, 520, ()=>{
+                            setFkStatus('Sujetando carga...');
                             fkFork(forkLiftY+0.5, 280, ()=>{
-
-                                // *** AQUÍ se "agarra" el item — solo ahora empieza el sync ***
                                 fkGrab(_fkItemMesh);
-
-                                // 6 — Salir del rack HORIZONTALMENTE (sin bajar)
-                                setFkStatus('⟵ Saliendo del rack...');
+                                setFkStatus('Saliendo del rack...');
                                 fkMove({x:boxPos.x, z:aisleZ}, 550, ()=>{
-
-                                    // 7 — Ya en el pasillo → bajar a altura de viaje
-                                    setFkStatus('↓ Bajando a altura de viaje...');
+                                    setFkStatus('Bajando a altura de viaje...');
                                     fkFork(travelY, 420, ()=>{
-
-                                        // 8 — Ir al pasillo principal
-                                        setFkStatus('⟶ Dirigiéndose al andén...');
+                                        setFkStatus('Dirigiendose al anden...');
                                         fkMove({x:sp.x, z:aisleZ}, 600, ()=>{
-
-                                            // 9 — Ir al andén de expedición
                                             fkMove({x:anden.x, z:anden.z}, 1400, ()=>{
-
-                                                // 9.5 — ABRIR PUERTAS DEL CAMIÓN
-                                                setFkStatus('🚪 Abriendo puertas del camión...');
+                                                setFkStatus('Abriendo puertas del camion...');
                                                 openTruckDoors(true, ()=>{
-
-                                                // 10 — Subir a la altura del piso de la caja del camión
-                                                setFkStatus('↑ Posicionando al nivel de carga...');
-                                                const truckForkY = (_fkTruckPos.y - 1.5) / forkliftMesh.scale.y;
-                                                fkFork(truckForkY, 300, ()=>{
-
-                                                    // 11 — Avanzar hacia la puerta del camión
-                                                    setFkStatus('⟶ Aproximando a la puerta...');
-                                                    fkMove({x:_fkTruckPos.x - 6, z:_fkTruckPos.z}, 480, ()=>{
-
-                                                        // 12 — Entrar a la caja del camión
-                                                        setFkStatus('⟶ Insertando carga en la caja...');
-                                                        fkMove({x:_fkTruckPos.x, z:_fkTruckPos.z}, 420, ()=>{
-
-                                                            // 13 — Depositar: bajar horquillas y soltar
-                                                            setFkStatus('↓ Depositando mercancía...');
-                                                            fkFork(truckForkY - 0.4, 350, ()=>{
-
-                                                                // Soltar item en el piso de la caja
-                                                                fkRelease(_fkTruckPos, ()=>{
-
-                                                                    // 14 — Retirar del camión
+                                                    setFkStatus('Posicionando al nivel de carga...');
+                                                    const truckForkY = (_fkTruckCargoPos.y - 1.2) / forkliftMesh.scale.y;
+                                                    fkFork(truckForkY, 300, ()=>{
+                                                        setFkStatus('Aproximando a la rampa...');
+                                                        fkMove({x:_fkTruckPos.x - 1.6, z:_fkTruckPos.z}, 520, ()=>{
+                                                            setFkStatus('Depositando mercancia en plataforma...');
+                                                            fkFork(Math.max(1.2, truckForkY - 0.22), 320, ()=>{
+                                                                fkRelease(_fkTruckCargoPos, ()=>{
                                                                     setTimeout(()=>{
-                                                                        setFkStatus('⟵ Saliendo del tráiler...');
-                                                                        fkFork(1.2, 350);
-                                                                        fkMove({x:anden.x+5, z:anden.z}, 480, ()=>{
-
-                                                                            // 14.5 — CERRAR PUERTAS
-                                                                            setFkStatus('🚪 Cerrando y asegurando puertas...');
+                                                                        setFkStatus('Retirandose de la puerta...');
+                                                                        fkFork(1.2, 320);
+                                                                        fkMove({x:anden.x+5, z:anden.z}, 520, ()=>{
+                                                                            setFkStatus('Cerrando y asegurando puertas...');
                                                                             openTruckDoors(false, ()=>{
-                                                                                setFkStatus('✅ Carga asegurada — presiona STOP para devolver');
+                                                                                setFkStatus('Carga asegurada - presiona STOP para devolver');
                                                                                 forkliftLight.intensity=1.0;
                                                                                 _fkBusy=false;
                                                                                 actualizarBtnForklift('ready');
                                                                             });
                                                                         });
-                                                                    }, 500);
+                                                                    }, 420);
                                                                 });
                                                             });
                                                         });
                                                     });
                                                 });
-
-                                                }); // cierre openTruckDoors
                                             });
                                         });
                                     });
@@ -2280,8 +3546,7 @@
                 });
             });
         }
-
-        // ── DETENER OPERACIÓN (STOP) ─────────────────────────
+        // ?????? DETENER OPERACIÓN (STOP) ─────────────────────────
         function detenerOperacionForklift() {
             if(_fkBusy) return;
             if(!forkliftMesh.visible){ _fkActive=false; actualizarBtnForklift('stop'); return; }
@@ -2295,6 +3560,7 @@
                     forkliftMesh.visible=false; truckMesh.visible=false;
                     forkliftLight.intensity=0;
                     if(activeRouteLine){scene.remove(activeRouteLine);activeRouteLine=null;}
+                    _fkTruckCargoPos=null; _fkItemOriginRot=null;
                     _fkBusy=false; _fkActive=false; actualizarBtnForklift('stop');
                 });
                 return;
@@ -2302,103 +3568,73 @@
 
             _fkBusy=true; actualizarBtnForklift('busy');
 
-            const rAisleZ  = orig.z - 9;
-            const rEnterZ  = orig.z + 1.5;
+            const rAisleZ  = orig.z - 10.5;
+            const rRackFaceZ = orig.z - 3.6;
             const rForkY   = Math.max(1.2,(orig.y-1.2)/forkliftMesh.scale.y);
-            const travelY  = 2.0;
-            const truckForkY = (_fkTruckPos.y - 1.5) / forkliftMesh.scale.y;
+            const travelY  = 2.25;
+            if(!_fkTruckCargoPos) _fkTruckCargoPos = getTruckCargoTarget(1, itemMesh);
+            const truckForkY = ((_fkTruckCargoPos || _fkTruckPos).y - 1.2) / forkliftMesh.scale.y;
 
-            // 1 — Ir a la puerta del camión
-            setFkStatus('⟶ Acercándose al camión...');
+            setFkStatus('Acercandose al camion...');
             fkFork(truckForkY, 300, ()=>{
-                fkMove({x:_fkTruckPos.x - 6, z:_fkTruckPos.z}, 600, ()=>{
-
-                    // 1.5 — ABRIR PUERTAS PARA RETIRAR
-                    setFkStatus('🚪 Abriendo puertas para retirar...');
+                fkMove({x:_fkTruckPos.x - 1.6, z:_fkTruckPos.z}, 640, ()=>{
+                    setFkStatus('Abriendo puertas para retirar...');
                     openTruckDoors(true, ()=>{
-
-                    // 2 — Entrar a la caja del camión
-                    setFkStatus('⟶ Entrando al tráiler...');
-                    fkMove({x:_fkTruckPos.x, z:_fkTruckPos.z}, 360, ()=>{
-
-                        // 3 — Insertar horquillas bajo el item
-                        setFkStatus('🔒 Recogiendo mercancía...');
-                        fkFork(truckForkY + 0.5, 270, ()=>{
-
-                            // *** AQUÍ se vuelve a agarrar el item ***
-                            fkGrab(itemMesh);
-
-                            // 4 — Salir del camión con el item
-                            setFkStatus('⟵ Extrayendo del tráiler...');
-                            fkMove({x:anden_x(), z:anden_z()}, 900, ()=>{
-
-                                // 4.5 — CERRAR PUERTAS
-                                setFkStatus('🚪 Cerrando puertas del camión...');
-                                openTruckDoors(false, ()=>{
-
-                                // 5 — Bajar a altura de viaje
-                                setFkStatus('↓ Bajando a altura de transporte...');
-                                fkFork(travelY, 600, ()=>{
-
-                                    // 6 — Ir al pasillo frente al rack
-                                    setFkStatus('⟶ Regresando al rack...');
-                                    fkMove({x:sp.x, z:rAisleZ}, 1200, ()=>{
-
-                                        // 7 — Alinear con el rack
-                                        fkMove({x:orig.x, z:rAisleZ}, 600, ()=>{
-
-                                            // 8 — Subir al nivel original (en el pasillo)
-                                            setFkStatus('↑ Subiendo al nivel original...');
-                                            fkFork(rForkY+0.55, 540, ()=>{
-
-                                                // 9 — Entrar horizontalmente al rack
-                                                setFkStatus('⟶ Insertando en rack...');
-                                                fkMove({x:orig.x, z:rEnterZ}, 420, ()=>{
-
-                                                    // 10 — Bajar para depositar sobre el estante
-                                                    fkFork(rForkY, 300, ()=>{
-
-                                                        // 11 — Soltar item en posición exacta
-                                                        setFkStatus('↓ Depositando en rack...');
-                                                        fkRelease(orig, ()=>{
-
-                                                            // 12 — Salir del rack SIN bajar
-                                                            setTimeout(()=>{
-                                                                setFkStatus('⟵ Saliendo del rack...');
-                                                                fkMove({x:orig.x, z:rAisleZ}, 480, ()=>{
-                                                                    fkFork(1.2, 240);
-                                                                    fkMove({x:sp.x, z:rAisleZ}, 420, ()=>{
-
-                                                                        // 13 — Volver al andén y desaparecer
-                                                                        setFkStatus('⟶ Volviendo al andén...');
-                                                                        fkMove(_fkBasePos, 1100, ()=>{
-                                                                            setFkStatus('✅ Operación completada');
-                                                                            forkliftMesh.visible=false;
-                                                                            truckMesh.visible=false;
-                                                                            forkliftLight.intensity=0;
-                                                                            if(activeRouteLine){scene.remove(activeRouteLine);activeRouteLine=null;}
-                                                                            _fkCarrying=null; _fkSyncing=false;
-                                                                            _fkItemMesh=null; _fkItemOrigin=null;
-                                                                            _fkBusy=false; _fkActive=false;
-                                                                            setTimeout(()=>actualizarBtnForklift('stop'),800);
+                        setFkStatus('Tomando mercancia desde la plataforma...');
+                        fkFork(truckForkY + 0.2, 260, ()=>{
+                            fkTransferToFork(itemMesh, ()=>{
+                                setFkStatus('Retirando mercancia...');
+                                fkMove({x:anden_x(), z:anden_z()}, 900, ()=>{
+                                    setFkStatus('Cerrando puertas del camion...');
+                                    openTruckDoors(false, ()=>{
+                                        setFkStatus('Bajando a altura de transporte...');
+                                        fkFork(travelY, 600, ()=>{
+                                            setFkStatus('Regresando al rack...');
+                                            fkMove({x:sp.x, z:rAisleZ}, 1200, ()=>{
+                                                fkMove({x:orig.x, z:rAisleZ}, 600, ()=>{
+                                                    setFkStatus('Subiendo al nivel original...');
+                                                    fkFork(rForkY+0.55, 540, ()=>{
+                                                        setFkStatus('Insertando en rack...');
+                                                        fkMove({x:orig.x, z:rRackFaceZ}, 520, ()=>{
+                                                            fkFork(rForkY, 300, ()=>{
+                                                                setFkStatus('Depositando en rack...');
+                                                                fkRelease(orig, ()=>{
+                                                                    if(_fkItemOriginRot) {
+                                                                        _fkItemMesh.rotation.copy(_fkItemOriginRot);
+                                                                    }
+                                                                    setTimeout(()=>{
+                                                                        setFkStatus('Saliendo del rack...');
+                                                                        fkMove({x:orig.x, z:rAisleZ}, 480, ()=>{
+                                                                            fkFork(1.2, 240);
+                                                                            fkMove({x:sp.x, z:rAisleZ}, 420, ()=>{
+                                                                                setFkStatus('Volviendo al anden...');
+                                                                                fkMove(_fkBasePos, 1100, ()=>{
+                                                                                    setFkStatus('Operacion completada');
+                                                                                    forkliftMesh.visible=false;
+                                                                                    truckMesh.visible=false;
+                                                                                    forkliftLight.intensity=0;
+                                                                                    if(activeRouteLine){scene.remove(activeRouteLine);activeRouteLine=null;}
+                                                                                    _fkCarrying=null; _fkSyncing=false;
+                                                                                    _fkItemMesh=null; _fkItemOrigin=null;
+                                                                                    _fkItemOriginRot=null; _fkTruckCargoPos=null;
+                                                                                    _fkBusy=false; _fkActive=false;
+                                                                                    setTimeout(()=>actualizarBtnForklift('stop'),800);
+                                                                                });
+                                                                            });
                                                                         });
-                                                                    });
+                                                                    }, 400);
                                                                 });
-                                                            }, 400);
+                                                            });
                                                         });
                                                     });
                                                 });
                                             });
                                         });
                                     });
-                                }); // cierre openTruckDoors(false)
-
-                                }); // cierre fkMove salida tráiler
+                                });
                             });
                         });
                     });
-
-                    }); // cierre openTruckDoors(true)
                 });
             });
         }
@@ -2511,6 +3747,7 @@
                 _fkTargetEst = null;
                 if(btnWrap) btnWrap.classList.add('hidden');
             }
+            if(d.slotKey) loadRecordIntoEditor(d.slotKey);
         }
 
         window.vistaNacional = function() {
@@ -2610,7 +3847,7 @@
                     const fg = forkliftMesh.userData.forkGroup;
                     const wp = new THREE.Vector3();
                     fg.getWorldPosition(wp);
-                    _fkCarrying.position.set(wp.x, wp.y + 1.6, wp.z + 2.8);
+                    _fkCarrying.position.set(wp.x, wp.y + 1.35, wp.z + 2.15);
                 }
 
                 // Vibración sutil del chasis mientras está activo
@@ -2660,8 +3897,103 @@
 
         window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); if(leafletMap) leafletMap.invalidateSize(); });
 
+        initializeInventoryScene();
         setTimeout(() => { const occupied = boxes.filter(b => b.userData.estadoStatus === 'Ocupado'); if(occupied.length > 0) document.getElementById('sku-search').placeholder = `Ej. ${occupied[Math.floor(Math.random()*occupied.length)].userData.id}`; }, 1500);
         setTimeout(() => { renderRutasFrecuentes(); }, 600);
+
+
     </script>
+
+<!-- SOLO SE MUESTRA LA PARTE MODIFICADA / AGREGADA -->
+
+<script>
+// ===============================
+// AUTO-CONEXION SUPABASE
+// ===============================
+
+window.addEventListener('load', async () => {
+  loadSavedSupabaseConfig();
+  await autoInitDataSource();
+});
+
+function loadSavedSupabaseConfig() {
+  const url = localStorage.getItem('sb_url');
+  const key = localStorage.getItem('sb_key');
+
+  if (url) document.getElementById('supabase-url').value = url;
+  if (key) document.getElementById('supabase-anon-key').value = key;
+}
+
+function saveSupabaseConfig() {
+  const url = document.getElementById('supabase-url').value;
+  const key = document.getElementById('supabase-anon-key').value;
+
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+
+  setCsvStatus('Configuración guardada');
+}
+
+async function autoInitDataSource() {
+  const url = document.getElementById('supabase-url').value;
+  const key = document.getElementById('supabase-anon-key').value;
+
+  if (!url || !key) {
+    setCsvStatus('Modo local (sin Supabase)');
+    return;
+  }
+
+  try {
+    await connectSupabaseNow();
+
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .limit(1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      setCsvStatus('Conectado a Supabase ✓');
+      await pullSupabaseNow();
+    } else {
+      setCsvStatus('Supabase vacío → usa "Migrar Inventario"');
+    }
+
+  } catch (err) {
+    console.warn('Fallback CSV', err);
+    setCsvStatus('Error Supabase → usando CSV');
+  }
+}
+
+// ===============================
+// MEJORA: STATUS VISUAL
+// ===============================
+
+function setCsvStatus(msg) {
+  const el = document.getElementById('csv-status');
+  if (el) el.innerText = msg;
+}
+
+// ===============================
+// OPCIONAL: AUTO GUARDAR CONFIG
+// ===============================
+
+document.getElementById('supabase-url')?.addEventListener('change', saveSupabaseConfig);
+document.getElementById('supabase-anon-key')?.addEventListener('change', saveSupabaseConfig);
+
+function calcularDias(fechaIngreso) {
+  if (!fechaIngreso) return 0;
+
+  const hoy = new Date();
+  const ingreso = new Date(fechaIngreso);
+
+  return Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
+}
+
+</script>
+
+<!-- FIN DE CAMBIOS -->
+
 </body>
 </html>
