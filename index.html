@@ -24,6 +24,52 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 10px; }
+        /* ── MEJORAS TÁCTILES / MÓVIL ──────────────────────────────── */
+        @media (pointer: coarse) {
+            /* Botones más grandes para toque */
+            .tab-btn { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; font-size: 10px !important; }
+            .glass-panel button { min-height: 36px; }
+            /* Panel de detalles a ancho completo en móvil */
+            #details-panel { 
+                width: calc(100vw - 1rem) !important;
+                max-width: 22rem;
+                max-height: 80vh !important;
+            }
+            /* Panel derecho más pequeño en touch para no tapar el canvas */
+            #right-panel { width: min(18rem, calc(100vw - 1rem)) !important; max-height: 55vh !important; }
+            /* Evitar zoom en inputs */
+            input, select { font-size: 16px !important; }
+        }
+        /* Área táctil más grande para cerrar el panel */
+        #details-panel button[onclick='closeDetails()'] {
+            min-width: 40px;
+            min-height: 40px;
+        }
+        /* Hint visual en móvil */
+        @media (pointer: coarse) {
+            #canvas-container::after {
+                content: '👆 Toca un contenedor para ver detalles';
+                position: absolute;
+                bottom: 1.5rem;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(8,15,30,0.85);
+                border: 1px solid rgba(56,189,248,0.3);
+                color: #94a3b8;
+                font-size: 11px;
+                padding: 6px 14px;
+                border-radius: 20px;
+                pointer-events: none;
+                white-space: nowrap;
+                animation: fadeHint 5s ease-out forwards;
+            }
+        }
+        @keyframes fadeHint {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
         #warp-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(ellipse at center, #38bdf8 0%, transparent 70%); opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.4s; }
         .warping { opacity: 0.12 !important; }
         .leaflet-container { background: #020617; }
@@ -608,7 +654,7 @@
                         </div>
                         <div>
                             <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Fecha Ingreso</label>
-                            <input id="edit-fecha-ingreso" type="date" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                            <input id="edit-fecha-ingreso" type="date" oninput="autoUpdateDays()" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
                         </div>
                         <div>
                             <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Fecha Salida</label>
@@ -1115,6 +1161,19 @@
 
         function inventoryStateName(estadoId) {
             return (estadosRed.find(e => e.id === estadoId) || {}).nombre || estadoId;
+        }
+
+        // Calcula días transcurridos desde la fecha de ingreso.
+        // Si hay fecha válida, la usa; si no, devuelve el valor manual como fallback.
+        function calcDaysFromFechaIngreso(fechaStr, manualFallback) {
+            if(fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+                const ingreso = new Date(fechaStr + 'T00:00:00');
+                if(!isNaN(ingreso.getTime())) {
+                    const diff = Math.floor((Date.now() - ingreso.getTime()) / 86400000);
+                    return Math.max(0, diff);
+                }
+            }
+            return Math.max(0, Math.round(numberOrZero(manualFallback)));
         }
         function normalizeText(value, fallback = '') {
             return value === undefined || value === null ? fallback : String(value).trim();
@@ -1856,6 +1915,16 @@
             document.getElementById('edit-fecha-salida').value = record.fechaSalida || '';
             document.getElementById('edit-tipo-anterior').value = record.tipoAnterior === '--' ? '' : record.tipoAnterior;
             document.getElementById('edit-notas').value = record.notas || '';
+            // Auto-calcular días desde fecha de ingreso si está disponible
+            if(record.fechaIngreso && /^\d{4}-\d{2}-\d{2}$/.test(record.fechaIngreso)) {
+                const daysCalc = calcDaysFromFechaIngreso(record.fechaIngreso, record.daysInWarehouse);
+                document.getElementById('edit-days').value = daysCalc;
+                document.getElementById('edit-days').style.color = '#86efac';
+                document.getElementById('edit-days').title = 'Calculado automáticamente desde la fecha de ingreso';
+            } else {
+                document.getElementById('edit-days').style.color = '';
+                document.getElementById('edit-days').title = 'Ingresa la fecha de entrada para calcular automáticamente';
+            }
         }
         function buildEditorRecord() {
             const estado = document.getElementById('edit-estado').value;
@@ -1895,7 +1964,7 @@
                 peso: document.getElementById('edit-peso').value,
                 volumen: document.getElementById('edit-volumen').value,
                 unidad: document.getElementById('edit-unidad').value || '--',
-                daysInWarehouse: document.getElementById('edit-days').value,
+                daysInWarehouse: calcDaysFromFechaIngreso(document.getElementById('edit-fecha-ingreso').value, document.getElementById('edit-days').value),
                 notas: document.getElementById('edit-notas').value
             });
         }
@@ -1961,6 +2030,24 @@
                 aplicarFiltrosUI(false);
                 selectItem(hitBox);
                 focusContainer();
+            }
+        };
+        window.autoUpdateDays = function() {
+            const fechaInput = document.getElementById('edit-fecha-ingreso');
+            const daysInput = document.getElementById('edit-days');
+            if(!fechaInput || !daysInput) return;
+            const fecha = fechaInput.value;
+            if(fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+                const ingreso = new Date(fecha + 'T00:00:00');
+                if(!isNaN(ingreso.getTime())) {
+                    const diff = Math.floor((Date.now() - ingreso.getTime()) / 86400000);
+                    daysInput.value = Math.max(0, diff);
+                    daysInput.style.color = '#86efac'; // verde — calculado automático
+                    daysInput.title = 'Calculado automáticamente desde la fecha de ingreso';
+                }
+            } else {
+                daysInput.style.color = '';
+                daysInput.title = 'Ingresa la fecha de entrada para calcular automáticamente';
             }
         };
         window.saveInventoryEditor = async function() {
@@ -3681,14 +3768,49 @@
         }
         window.closeDetails = deselectItem;
 
-        window.addEventListener('click', (event) => {
-            if(event.target.closest('.glass-panel')) return; if(mapMode) return;
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1; mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        // ── SOPORTE CLICK + TOUCH (móvil / pantallas táctiles) ──────
+        let _touchStartX = 0, _touchStartY = 0, _touchMoved = false;
+
+        function handlePickEvent(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const visibleBoxes = boxes.filter(b => b.userData.visualMesh.visible);
             const intersects = raycaster.intersectObjects(visibleBoxes);
             if(intersects.length > 0) selectItem(intersects[0].object); else deselectItem();
+        }
+
+        window.addEventListener('click', (event) => {
+            if(event.target.closest('.glass-panel')) return;
+            if(mapMode) return;
+            // En touch, el click se dispara también — lo ignoramos si ya lo manejó el touchend
+            if(event.sourceCapabilities && !event.sourceCapabilities.firesTouchEvents) {
+                handlePickEvent(event.clientX, event.clientY);
+            } else if(!('ontouchstart' in window)) {
+                // Dispositivo sin touch real
+                handlePickEvent(event.clientX, event.clientY);
+            }
         });
+
+        window.addEventListener('touchstart', (event) => {
+            if(event.target.closest('.glass-panel')) return;
+            const t = event.touches[0];
+            _touchStartX = t.clientX;
+            _touchStartY = t.clientY;
+            _touchMoved = false;
+        }, { passive: true });
+
+        window.addEventListener('touchmove', () => {
+            _touchMoved = true;
+        }, { passive: true });
+
+        window.addEventListener('touchend', (event) => {
+            if(_touchMoved) return; // fue un arrastre (orbit), no un tap
+            if(event.target.closest('.glass-panel')) return;
+            if(mapMode) return;
+            // Usar la última posición registrada en touchstart
+            handlePickEvent(_touchStartX, _touchStartY);
+        }, { passive: true });
 
         function selectItem(mesh) {
             deselectItem(); selectedBox = mesh; const vMesh = selectedBox.userData.visualMesh;
@@ -3708,7 +3830,9 @@
             if(d.estadoStatus === 'Ocupado') {
                 title.innerText = "Detalle de Artículo"; statusContainer.classList.replace('border-red-500/50','border-slate-700/50');
                 document.getElementById('lbl-fecha-1').innerText = "Fecha Ingreso"; document.getElementById('detail-date-in').innerText = d.fechaIngreso;
-                document.getElementById('lbl-fecha-2').innerText = "Días Almacenado"; document.getElementById('detail-days').innerText = `${d.daysInWarehouse} días`;
+                document.getElementById('lbl-fecha-2').innerText = "Días Almacenado";
+                const diasActuales = calcDaysFromFechaIngreso(d.fechaIngreso, d.daysInWarehouse);
+                document.getElementById('detail-days').innerText = `${diasActuales} días`;
                 costContainer.classList.remove('hidden'); document.getElementById('detail-cost').innerText = formatter.format(d.costo);
                 document.getElementById('detail-peso').innerText = d.unidad === 'kg' ? `${d.peso} kg` : `${d.peso} ${d.unidad}`;
                 document.getElementById('detail-volumen').innerText = d.unidad === 'lt' ? `${d.volumen} lt` : '--'; document.getElementById('detail-unidad').innerText = d.unidad.toUpperCase();
@@ -3982,18 +4106,11 @@ function setCsvStatus(msg) {
 document.getElementById('supabase-url')?.addEventListener('change', saveSupabaseConfig);
 document.getElementById('supabase-anon-key')?.addEventListener('change', saveSupabaseConfig);
 
-function calcularDias(fechaIngreso) {
-  if (!fechaIngreso) return 0;
-
-  const hoy = new Date();
-  const ingreso = new Date(fechaIngreso);
-
-  return Math.floor((hoy - ingreso) / (1000 * 60 * 60 * 24));
-}
-
 </script>
 
 <!-- FIN DE CAMBIOS -->
 
 </body>
 </html>
+
+
