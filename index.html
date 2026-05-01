@@ -3897,8 +3897,41 @@
         };
 
         window.focusContainer = function() {
-            if(!selectedBox) return; const pos = selectedBox.position;
-            new TWEEN.Tween(controls.target).to({x:pos.x,y:pos.y,z:pos.z},1200).easing(TWEEN.Easing.Cubic.InOut).start(); new TWEEN.Tween(camera.position).to({x:pos.x+25,y:pos.y+25,z:pos.z+25},1200).easing(TWEEN.Easing.Cubic.InOut).start();
+            if(!selectedBox) return;
+            const pos = selectedBox.position;
+
+            // ── Compensar el panel de detalles izquierdo ─────────────────
+            // El panel tiene ~17rem (~272px). Calculamos cuánto representa
+            // ese ancho en unidades de mundo 3D a la distancia actual,
+            // y desplazamos el target hacia la derecha para que el objeto
+            // quede centrado en el área visible del canvas.
+            const panelEl = document.getElementById('details-panel');
+            const panelVisible = panelEl && !panelEl.classList.contains('hidden');
+            let offsetX = 0;
+            if(panelVisible) {
+                const panelW = panelEl.offsetWidth || 272;           // px
+                const canvasW = window.innerWidth;                   // px
+                // Fracción de pantalla ocupada por el panel
+                const fraction = panelW / canvasW;
+                // Distancia cámara→target actual
+                const camToTarget = camera.position.distanceTo(controls.target);
+                // FOV horizontal (radianes)
+                const vFovRad = camera.fov * Math.PI / 180;
+                const aspect  = camera.aspect;
+                const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * aspect);
+                // Cuántas unidades de mundo cubre la pantalla completa a esa distancia
+                const worldWidth = 2 * camToTarget * Math.tan(hFovRad / 2);
+                // Desplazamiento en X para centrar en el área libre
+                offsetX = -(fraction * worldWidth * 0.5);
+            }
+
+            const targetX = pos.x + offsetX;
+            new TWEEN.Tween(controls.target)
+                .to({x: targetX, y: pos.y, z: pos.z}, 1200)
+                .easing(TWEEN.Easing.Cubic.InOut).start();
+            new TWEEN.Tween(camera.position)
+                .to({x: targetX + 25, y: pos.y + 25, z: pos.z + 25}, 1200)
+                .easing(TWEEN.Easing.Cubic.InOut).start();
         };
 
         window.buscarSKU = function() {
