@@ -24,52 +24,6 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 10px; }
-        /* ── MEJORAS TÁCTILES / MÓVIL ──────────────────────────────── */
-        @media (pointer: coarse) {
-            /* Botones más grandes para toque */
-            .tab-btn { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; font-size: 10px !important; }
-            .glass-panel button { min-height: 36px; }
-            /* Panel de detalles a ancho completo en móvil */
-            #details-panel { 
-                width: calc(100vw - 1rem) !important;
-                max-width: 22rem;
-                max-height: 80vh !important;
-            }
-            /* Panel derecho más pequeño en touch para no tapar el canvas */
-            #right-panel { width: min(18rem, calc(100vw - 1rem)) !important; max-height: 55vh !important; }
-            /* Evitar zoom en inputs */
-            input, select { font-size: 16px !important; }
-        }
-        /* Área táctil más grande para cerrar el panel */
-        #details-panel button[onclick='closeDetails()'] {
-            min-width: 40px;
-            min-height: 40px;
-        }
-        /* Hint visual en móvil */
-        @media (pointer: coarse) {
-            #canvas-container::after {
-                content: '👆 Toca un contenedor para ver detalles';
-                position: absolute;
-                bottom: 1.5rem;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(8,15,30,0.85);
-                border: 1px solid rgba(56,189,248,0.3);
-                color: #94a3b8;
-                font-size: 11px;
-                padding: 6px 14px;
-                border-radius: 20px;
-                pointer-events: none;
-                white-space: nowrap;
-                animation: fadeHint 5s ease-out forwards;
-            }
-        }
-        @keyframes fadeHint {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-
         #warp-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(ellipse at center, #38bdf8 0%, transparent 70%); opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.4s; }
         .warping { opacity: 0.12 !important; }
         .leaflet-container { background: #020617; }
@@ -184,11 +138,89 @@
                     <div class="text-[10px] text-red-400 uppercase tracking-widest font-bold mb-1">⚠️ Alerta Operativa</div>
                     <div id="alert-message" class="text-xs text-white">Próximo a caducar / Alta Rotación</div>
                 </div>
+
+                <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/30">
+                    <button id="detail-audit-toggle" onclick="toggleSelectedAuditPanel()" class="w-full bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-between text-[11px] uppercase tracking-widest border border-slate-600">
+                        <span>Bitácora del SKU</span>
+                        <span id="detail-audit-toggle-icon">▼</span>
+                    </button>
+                    <div id="detail-audit-panel" class="hidden mt-3 space-y-2">
+                        <div class="text-[10px] text-slate-400 uppercase tracking-widest">Historial del producto seleccionado</div>
+                        <div id="detail-audit-status" class="text-[11px] text-slate-400 bg-slate-950/60 border border-slate-700 rounded-lg px-2 py-2">Selecciona un producto para consultar sus movimientos.</div>
+                        <div id="detail-audit-list" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
             </div>
             
+
+            <!-- ══ HISTORIAL SLOT VACÍO (solo visible cuando está vacío) ══ -->
+            <div id="slot-history-section" class="hidden space-y-2">
+
+              <!-- Último ocupante -->
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-red-500/30">
+                <div class="text-[9px] text-red-400 uppercase tracking-widest font-bold mb-2 flex items-center gap-1">
+                  📦 Último Ocupante
+                </div>
+                <div id="last-occ-empty" class="text-[11px] text-slate-500 italic">Sin registro de ocupante anterior.</div>
+                <div id="last-occ-card" class="hidden space-y-1">
+                  <div class="flex justify-between items-center">
+                    <span id="last-occ-sku" class="font-mono font-bold text-sky-300 text-sm">--</span>
+                    <span id="last-occ-badge" class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-900/40 text-amber-400 border border-amber-500/30">--</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-1 text-[10px] mt-1">
+                    <div class="bg-slate-900/60 p-1.5 rounded">
+                      <div class="text-slate-500 uppercase tracking-widest text-[8px]">Ingresó</div>
+                      <div id="last-occ-entrada" class="text-slate-200 font-mono">--</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-1.5 rounded">
+                      <div class="text-slate-500 uppercase tracking-widest text-[8px]">Salió</div>
+                      <div id="last-occ-salida" class="text-slate-200 font-mono">--</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-1.5 rounded">
+                      <div class="text-slate-500 uppercase tracking-widest text-[8px]">Destino</div>
+                      <div id="last-occ-destino" class="text-violet-300 font-mono font-bold">--</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-1.5 rounded">
+                      <div class="text-slate-500 uppercase tracking-widest text-[8px]">Días aquí</div>
+                      <div id="last-occ-dias" class="text-amber-400 font-mono font-bold">--</div>
+                    </div>
+                  </div>
+                  <div class="bg-slate-900/60 p-1.5 rounded text-[10px]">
+                    <div class="text-slate-500 uppercase tracking-widest text-[8px]">Contenido</div>
+                    <div id="last-occ-contenido" class="text-slate-200">--</div>
+                  </div>
+                  <div class="bg-emerald-900/20 p-1.5 rounded border border-emerald-500/20 flex justify-between text-[10px]">
+                    <span class="text-emerald-400 uppercase tracking-widest text-[8px]">Costo</span>
+                    <span id="last-occ-costo" class="font-mono font-bold text-emerald-300">$0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Historial del slot (sesión + Supabase) -->
+              <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/30">
+                <button id="slot-hist-toggle-btn" onclick="toggleSlotHistoryPanel()"
+                  class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-3 rounded-lg transition-colors flex items-center justify-between text-[11px] uppercase tracking-widest border border-slate-600">
+                  <span>🗂 Historial del Slot</span>
+                  <span id="slot-hist-toggle-icon">▼</span>
+                </button>
+                <div id="slot-hist-panel" class="hidden mt-2 space-y-1.5">
+                  <div id="slot-hist-status" class="text-[10px] text-slate-500 italic">Cargando historial...</div>
+                  <div id="slot-hist-list" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+              </div>
+
+            </div>
+            <!-- ══ FIN HISTORIAL SLOT VACÍO ══ -->
+
             <button onclick="focusContainer()" class="w-full bg-sky-700 hover:bg-sky-600 text-white font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(2,132,199,0.4)] text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 Centrar Cámara en Objeto
+            </button>
+
+            <!-- BOTÓN TRANSFERIR -->
+            <button id="btn-transferir" onclick="window.abrirModalTransferencia()" class="hidden w-full font-bold py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm" style="background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(109,40,217,.15));border:1px solid rgba(139,92,246,.5);color:#c4b5fd;box-shadow:0 0 18px rgba(139,92,246,.2);">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                Transferir a Otro Hub
             </button>
 
             <!-- BOTÓN MONTACARGAS START/STOP -->
@@ -460,6 +492,10 @@
                         Preparando inventario...
                     </div>
                     <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div id="supabase-connection-pill" class="text-[10px] border rounded-lg px-2 py-2 bg-slate-800/80 border-slate-700 text-slate-300">Nube: pendiente</div>
+                        <div id="supabase-write-pill" class="text-[10px] border rounded-lg px-2 py-2 bg-slate-800/80 border-slate-700 text-slate-300">Ultima escritura: --</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
                         <button onclick="connectSupabaseNow()" id="btn-source-supabase" class="bg-sky-700 hover:bg-sky-600 text-white py-2 rounded text-[9px] font-bold transition-colors">Supabase Principal</button>
                         <button onclick="openCsvFile()" id="btn-source-csv" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-[9px] font-bold transition-colors">CSV Respaldo</button>
                     </div>
@@ -654,7 +690,7 @@
                         </div>
                         <div>
                             <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Fecha Ingreso</label>
-                            <input id="edit-fecha-ingreso" type="date" oninput="autoUpdateDays()" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
+                            <input id="edit-fecha-ingreso" type="date" class="w-full bg-slate-800 text-white text-xs px-3 py-2 rounded border border-slate-600 font-mono">
                         </div>
                         <div>
                             <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Fecha Salida</label>
@@ -1147,7 +1183,9 @@
         const inventoryPositionOptions = ['P-1', 'P-2', 'P-3'];
         const inventoryPositionOffset = { 'P-1': -2.5, 'P-2': 0, 'P-3': 2.5 };
         const inventoryCsvFileName = 'mercancias_dashboard.csv';
-        const SUPABASE_CONFIG_KEY = 'dashboard_supabase_config_v1';
+const SUPABASE_CONFIG_KEY = 'dashboard_supabase_config_v1';
+const SUPABASE_DEFAULT_URL = 'https://wvpsmdvzdwijjxxyfauho.supabase.co';
+const SUPABASE_DEFAULT_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2cHNtZHZ6ZHdpanh4eWZhdWhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTU0MDIsImV4cCI6MjA5Mjk3MTQwMn0.EZHhfIlK6fy3z-zFxncQPYKlc7GYDe1qSeiBhS0jHLc';
 
         let inventoryRows = [];
         let inventoryIndex = new Map();
@@ -1155,25 +1193,19 @@
         let inventoryFileHandle = null;
         let inventorySourceName = inventoryCsvFileName;
         let inventorySourceMode = 'supabase';
-        let supabaseConfig = { url: '', anonKey: '', table: 'inventory_items' };
+let supabaseConfig = { url: SUPABASE_DEFAULT_URL, anonKey: SUPABASE_DEFAULT_ANON_KEY, table: 'inventory_items' };
         let supabaseAutoRefreshHandle = null;
         let auditLogRows = [];
 
         function inventoryStateName(estadoId) {
             return (estadosRed.find(e => e.id === estadoId) || {}).nombre || estadoId;
         }
-
-        // Calcula días transcurridos desde la fecha de ingreso.
-        // Si hay fecha válida, la usa; si no, devuelve el valor manual como fallback.
-        function calcDaysFromFechaIngreso(fechaStr, manualFallback) {
+        function calcDaysFromFechaIngreso(fechaStr, fallback) {
             if(fechaStr && /^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
-                const ingreso = new Date(fechaStr + 'T00:00:00');
-                if(!isNaN(ingreso.getTime())) {
-                    const diff = Math.floor((Date.now() - ingreso.getTime()) / 86400000);
-                    return Math.max(0, diff);
-                }
+                const d=new Date(fechaStr+'T00:00:00');
+                if(!isNaN(d.getTime())) return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));
             }
-            return Math.max(0, Math.round(numberOrZero(manualFallback)));
+            return Math.max(0,Math.round(numberOrZero(fallback)));
         }
         function normalizeText(value, fallback = '') {
             return value === undefined || value === null ? fallback : String(value).trim();
@@ -1406,11 +1438,42 @@
             el.className = `text-[10px] border rounded-lg px-2 py-2 mb-2 ${classes[tone] || classes.info}`;
             el.textContent = message;
         }
+        function setSupabaseConnectionPill(message, tone = 'info') {
+            const el = document.getElementById('supabase-connection-pill');
+            if(!el) return;
+            const classes = {
+                info: 'text-slate-300 bg-slate-800/80 border-slate-700',
+                success: 'text-emerald-200 bg-emerald-900/30 border-emerald-500/40',
+                warning: 'text-amber-200 bg-amber-900/30 border-amber-500/40',
+                error: 'text-red-200 bg-red-900/30 border-red-500/40'
+            };
+            el.className = `text-[10px] border rounded-lg px-2 py-2 ${classes[tone] || classes.info}`;
+            el.textContent = message;
+        }
+        function setSupabaseWritePill(message, tone = 'info') {
+            const el = document.getElementById('supabase-write-pill');
+            if(!el) return;
+            const classes = {
+                info: 'text-slate-300 bg-slate-800/80 border-slate-700',
+                success: 'text-emerald-200 bg-emerald-900/30 border-emerald-500/40',
+                warning: 'text-amber-200 bg-amber-900/30 border-amber-500/40',
+                error: 'text-red-200 bg-red-900/30 border-red-500/40'
+            };
+            el.className = `text-[10px] border rounded-lg px-2 py-2 ${classes[tone] || classes.info}`;
+            el.textContent = message;
+        }
         function loadSupabaseConfig() {
             try {
                 const raw = localStorage.getItem(SUPABASE_CONFIG_KEY);
-                if(raw) supabaseConfig = { table: 'inventory_items', ...JSON.parse(raw) };
+                if(raw) supabaseConfig = { url: SUPABASE_DEFAULT_URL, anonKey: SUPABASE_DEFAULT_ANON_KEY, table: 'inventory_items', ...JSON.parse(raw) };
             } catch (error) {}
+            const legacyUrl = localStorage.getItem('sb_url');
+            const legacyKey = localStorage.getItem('sb_key');
+            if(!supabaseConfig.url && legacyUrl) supabaseConfig.url = legacyUrl;
+            if(!supabaseConfig.anonKey && legacyKey) supabaseConfig.anonKey = legacyKey;
+            if(!supabaseConfig.url) supabaseConfig.url = SUPABASE_DEFAULT_URL;
+            if(!supabaseConfig.anonKey) supabaseConfig.anonKey = SUPABASE_DEFAULT_ANON_KEY;
+            if(!supabaseConfig.table) supabaseConfig.table = 'inventory_items';
             const urlInput = document.getElementById('supabase-url');
             const keyInput = document.getElementById('supabase-anon-key');
             const tableInput = document.getElementById('supabase-table');
@@ -1426,8 +1489,8 @@
         }
         function readSupabaseConfigFromInputs() {
             supabaseConfig = {
-                url: normalizeText(document.getElementById('supabase-url')?.value || ''),
-                anonKey: normalizeText(document.getElementById('supabase-anon-key')?.value || ''),
+                url: normalizeText(document.getElementById('supabase-url')?.value || SUPABASE_DEFAULT_URL),
+                anonKey: normalizeText(document.getElementById('supabase-anon-key')?.value || SUPABASE_DEFAULT_ANON_KEY),
                 table: normalizeText(document.getElementById('supabase-table')?.value || 'inventory_items', 'inventory_items')
             };
             return supabaseConfig;
@@ -1556,6 +1619,99 @@
                 `;
             }).join('');
         }
+        let selectedAuditExpanded = false;
+        function setSelectedAuditStatus(message, tone = 'info') {
+            const el = document.getElementById('detail-audit-status');
+            if(!el) return;
+            el.textContent = message;
+            const classMap = {
+                info: 'text-slate-300 bg-slate-950/60 border-slate-700',
+                success: 'text-emerald-200 bg-emerald-950/30 border-emerald-500/40',
+                warning: 'text-amber-200 bg-amber-950/30 border-amber-500/40',
+                error: 'text-red-200 bg-red-950/30 border-red-500/40'
+            };
+            el.className = `text-[11px] border rounded-lg px-2 py-2 ${classMap[tone] || classMap.info}`;
+        }
+        function toggleSelectedAuditPanel(force) {
+            selectedAuditExpanded = typeof force === 'boolean' ? force : !selectedAuditExpanded;
+            const panel = document.getElementById('detail-audit-panel');
+            const icon = document.getElementById('detail-audit-toggle-icon');
+            if(!panel || !icon) return;
+            panel.classList.toggle('hidden', !selectedAuditExpanded);
+            icon.textContent = selectedAuditExpanded ? '▲' : '▼';
+            if(selectedAuditExpanded) renderSelectedAuditLog();
+        }
+        window.toggleSelectedAuditPanel = toggleSelectedAuditPanel;
+        function selectedAuditMatches(row, record) {
+            if(!row || !record) return false;
+            const payload = row.payload_json || {};
+            const recordPayload = payload.record || {};
+            const sku = String(record.sku || record.id || '').toUpperCase();
+            const slotKey = String(record.slotKey || '').toUpperCase();
+            const rowSlot = String(row.slot_key || '').toUpperCase();
+            const beforeSlot = String(payload.before_slot || '').toUpperCase();
+            const afterSlot = String(payload.after_slot || '').toUpperCase();
+            const payloadSku = String(recordPayload.sku || recordPayload.id || '').toUpperCase();
+            const summary = String(row.summary || '').toUpperCase();
+            return (
+                (!!sku && (payloadSku === sku || summary.includes(sku))) ||
+                (!!slotKey && (rowSlot === slotKey || beforeSlot === slotKey || afterSlot === slotKey))
+            );
+        }
+        function selectedAuditTitle(row) {
+            return ({
+                move_update: 'Transferencia del SKU',
+                update: 'Actualizacion de datos',
+                clear_slot: 'Liberacion de espacio'
+            })[row.action_type] || 'Evento del inventario';
+        }
+        function renderSelectedAuditLog() {
+            const listEl = document.getElementById('detail-audit-list');
+            if(!listEl) return;
+            if(!selectedBox || !selectedBox.userData) {
+                listEl.innerHTML = '';
+                setSelectedAuditStatus('Selecciona un producto para consultar sus movimientos.', 'info');
+                return;
+            }
+            const record = selectedBox.userData;
+            if(record.estadoStatus !== 'Ocupado' || record.id === 'VACIO') {
+                listEl.innerHTML = '';
+                setSelectedAuditStatus('Este espacio esta vacio. La bitacora detallada se muestra solo para productos activos.', 'warning');
+                return;
+            }
+            if(inventorySourceMode !== 'supabase' || !hasSupabaseConfig()) {
+                listEl.innerHTML = '';
+                setSelectedAuditStatus('Conecta Supabase para consultar la bitacora historica del SKU.', 'warning');
+                return;
+            }
+            const rows = auditLogRows.filter(row => selectedAuditMatches(row, record));
+            if(!rows.length) {
+                listEl.innerHTML = '';
+                setSelectedAuditStatus(`No hay movimientos recientes en memoria para ${record.sku || record.id}. Pulsa Actualizar si acabas de moverlo.`, 'info');
+                return;
+            }
+            setSelectedAuditStatus(`Mostrando ${rows.length} eventos para ${record.sku || record.id}.`, 'success');
+            listEl.innerHTML = rows.map(row => {
+                const payload = row.payload_json || {};
+                const when = row.created_at ? new Date(row.created_at).toLocaleString() : '--';
+                const badgeClass = auditTypeClass(row.action_type);
+                const from = payload.before_slot ? escapeHtml(payload.before_slot) : '';
+                const to = payload.after_slot ? escapeHtml(payload.after_slot) : '';
+                const route = [from && `Origen: ${from}`, to && `Destino: ${to}`].filter(Boolean).join(' · ');
+                return `
+                    <div class="bg-slate-800/80 border border-slate-700 rounded-lg px-2 py-2">
+                        <div class="flex justify-between gap-2 items-start">
+                            <div class="px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${badgeClass}">${escapeHtml(auditTypeLabel(row.action_type))}</div>
+                            <div class="text-slate-500 font-mono text-[10px]">${escapeHtml(when)}</div>
+                        </div>
+                        <div class="text-slate-100 mt-2 text-xs font-bold">${escapeHtml(selectedAuditTitle(row))}</div>
+                        <div class="text-slate-300 mt-1 text-[11px]">${escapeHtml(row.summary || '')}</div>
+                        <div class="text-slate-400 mt-2 text-[10px] font-mono leading-5">${route || escapeHtml(row.slot_key || '--')}</div>
+                        <div class="text-slate-500 mt-1 text-[10px]">Usuario: ${escapeHtml(row.actor_name || '--')} · Equipo: ${escapeHtml(row.actor_device || '--')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
         window.exportAuditLogCsv = function() {
             const rows = filteredAuditRows();
             if(!rows.length) {
@@ -1595,19 +1751,27 @@
                 if(!silent) setCsvStatus('Configura URL, anon key y tabla de Supabase para conectar el inventario en linea.', 'warning');
                 return false;
             }
-            const query = 'select=*&order=estado.asc,zona.asc,rack.asc,level.asc,position.asc';
-            const response = await fetch(getSupabaseRestUrl(query), {
-                headers: {
-                    'apikey': supabaseConfig.anonKey,
-                    'Authorization': `Bearer ${supabaseConfig.anonKey}`
-                }
-            });
-            if(!response.ok) throw new Error(`Supabase GET ${response.status}`);
-            const rows = (await response.json()).map(mapSupabaseRowToInventory);
+            const allRows = [];
+            const pageSize = 1000;
+            for(let offset = 0; ; offset += pageSize) {
+                const query = `select=*&order=estado.asc,zona.asc,rack.asc,level.asc,position.asc&limit=${pageSize}&offset=${offset}`;
+                const response = await fetch(getSupabaseRestUrl(query), {
+                    headers: {
+                        'apikey': supabaseConfig.anonKey,
+                        'Authorization': `Bearer ${supabaseConfig.anonKey}`
+                    }
+                });
+                if(!response.ok) throw new Error(`Supabase GET ${response.status}`);
+                const chunk = await response.json();
+                allRows.push(...chunk);
+                if(chunk.length < pageSize) break;
+            }
+            const rows = allRows.map(mapSupabaseRowToInventory);
             applyInventoryDataset(rows, `Supabase · ${supabaseConfig.table}`, true);
             inventorySourceMode = 'supabase';
             updateSourceButtons();
-            if(!silent) setCsvStatus(`Supabase conectado: ${supabaseConfig.table}. Actualizacion automatica cada 30s.`, 'success');
+            setSupabaseConnectionPill(`Nube: conectada · ${rows.length} registros`, 'success');
+            if(!silent) setCsvStatus(`Supabase conectado: ${supabaseConfig.table} · ${rows.length} registros · actualizacion automatica cada 30s.`, 'success');
             loadAuditLogNow(true);
             startSupabaseAutoRefresh();
             return true;
@@ -1626,6 +1790,7 @@
                 body: JSON.stringify(payload)
             });
             if(!response.ok) throw new Error(`Supabase UPSERT ${response.status}`);
+            setSupabaseWritePill(`Ultima escritura: ${new Date().toLocaleTimeString()}`, 'success');
             return true;
         }
         async function pushInventoryBatchToSupabase(records) {
@@ -1645,6 +1810,7 @@
                 });
                 if(!response.ok) throw new Error(`Supabase lote ${Math.floor(i / batchSize) + 1}: ${response.status}`);
             }
+            setSupabaseWritePill(`Ultima escritura: ${new Date().toLocaleTimeString()} · lote`, 'success');
             return true;
         }
         async function pushAuditLogToSupabase(actionType, slotKey, summary, payload = {}) {
@@ -1673,7 +1839,7 @@
         window.loadAuditLogNow = async function(silent = false) {
             if(!hasSupabaseConfig()) { if(!silent) renderAuditLog(); return; }
             try {
-                const response = await fetch(getSupabaseAuditUrl('select=*&order=created_at.desc&limit=20'), {
+                const response = await fetch(getSupabaseAuditUrl('select=*&order=created_at.desc&limit=120'), {
                     headers: {
                         'apikey': supabaseConfig.anonKey,
                         'Authorization': `Bearer ${supabaseConfig.anonKey}`
@@ -1682,28 +1848,38 @@
                 if(response.status === 404) {
                     auditLogRows = [];
                     renderAuditLog();
+                    renderSelectedAuditLog();
                     if(!silent) setCsvStatus('La bitacora aun no existe en Supabase. Ejecuta otra vez el SQL actualizado para crear inventory_audit_log.', 'warning');
                     return;
                 }
                 if(!response.ok) throw new Error(`Supabase AUDIT GET ${response.status}`);
                 auditLogRows = await response.json();
                 renderAuditLog();
+                renderSelectedAuditLog();
             } catch (error) {
+                setSupabaseConnectionPill(`Nube: error auditoria ${error.message}`, 'warning');
+                renderSelectedAuditLog();
                 if(!silent) setCsvStatus(`No se pudo leer la bitacora: ${error.message}`, 'warning');
             }
         };
         window.saveSupabaseConfig = function() {
             readSupabaseConfigFromInputs();
             localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(supabaseConfig));
+            localStorage.setItem('sb_url', supabaseConfig.url || '');
+            localStorage.setItem('sb_key', supabaseConfig.anonKey || '');
             setCsvStatus('Configuracion Supabase guardada en este navegador.', 'success');
         };
         window.clearSupabaseConfig = function() {
-            supabaseConfig = { url: '', anonKey: '', table: 'inventory_items' };
+            supabaseConfig = { url: SUPABASE_DEFAULT_URL, anonKey: SUPABASE_DEFAULT_ANON_KEY, table: 'inventory_items' };
             localStorage.removeItem(SUPABASE_CONFIG_KEY);
+            localStorage.removeItem('sb_url');
+            localStorage.removeItem('sb_key');
             if(inventorySourceMode === 'supabase') inventorySourceMode = 'csv';
             stopSupabaseAutoRefresh();
             loadSupabaseConfig();
             updateSourceButtons();
+            setSupabaseConnectionPill('Nube: desconectada', 'info');
+            setSupabaseWritePill('Ultima escritura: --', 'info');
             setCsvStatus('Configuracion Supabase limpiada. El tablero quedara en modo local temporal hasta volver a conectar la nube.', 'info');
         };
         window.connectSupabaseNow = async function() {
@@ -1711,6 +1887,7 @@
                 saveSupabaseConfig();
                 await loadInventoryFromSupabase(false);
             } catch (error) {
+                setSupabaseConnectionPill(`Nube: error ${error.message}`, 'error');
                 setCsvStatus(`No se pudo conectar a Supabase: ${error.message}`, 'error');
             }
         };
@@ -1915,16 +2092,6 @@
             document.getElementById('edit-fecha-salida').value = record.fechaSalida || '';
             document.getElementById('edit-tipo-anterior').value = record.tipoAnterior === '--' ? '' : record.tipoAnterior;
             document.getElementById('edit-notas').value = record.notas || '';
-            // Auto-calcular días desde fecha de ingreso si está disponible
-            if(record.fechaIngreso && /^\d{4}-\d{2}-\d{2}$/.test(record.fechaIngreso)) {
-                const daysCalc = calcDaysFromFechaIngreso(record.fechaIngreso, record.daysInWarehouse);
-                document.getElementById('edit-days').value = daysCalc;
-                document.getElementById('edit-days').style.color = '#86efac';
-                document.getElementById('edit-days').title = 'Calculado automáticamente desde la fecha de ingreso';
-            } else {
-                document.getElementById('edit-days').style.color = '';
-                document.getElementById('edit-days').title = 'Ingresa la fecha de entrada para calcular automáticamente';
-            }
         }
         function buildEditorRecord() {
             const estado = document.getElementById('edit-estado').value;
@@ -2030,24 +2197,6 @@
                 aplicarFiltrosUI(false);
                 selectItem(hitBox);
                 focusContainer();
-            }
-        };
-        window.autoUpdateDays = function() {
-            const fechaInput = document.getElementById('edit-fecha-ingreso');
-            const daysInput = document.getElementById('edit-days');
-            if(!fechaInput || !daysInput) return;
-            const fecha = fechaInput.value;
-            if(fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-                const ingreso = new Date(fecha + 'T00:00:00');
-                if(!isNaN(ingreso.getTime())) {
-                    const diff = Math.floor((Date.now() - ingreso.getTime()) / 86400000);
-                    daysInput.value = Math.max(0, diff);
-                    daysInput.style.color = '#86efac'; // verde — calculado automático
-                    daysInput.title = 'Calculado automáticamente desde la fecha de ingreso';
-                }
-            } else {
-                daysInput.style.color = '';
-                daysInput.title = 'Ingresa la fecha de entrada para calcular automáticamente';
             }
         };
         window.saveInventoryEditor = async function() {
@@ -3756,7 +3905,11 @@
                 if(selectedBox.userData.type !== 'vacio') new TWEEN.Tween(vMesh.scale).to({x:1,y:1,z:1},200).start();
                 selectedBox = null; originalMaterial = null;
             }
-            searchMarker.visible = false; document.getElementById('details-panel').classList.add('hidden');
+            searchMarker.visible = false; document.getElementById('details-panel').classList.add('hidden'); const _bth=document.getElementById('btn-transferir'); if(_bth) _bth.classList.add('hidden');
+            toggleSelectedAuditPanel(false);
+            const auditList = document.getElementById('detail-audit-list');
+            if(auditList) auditList.innerHTML = '';
+            setSelectedAuditStatus('Selecciona un producto para consultar sus movimientos.', 'info');
             if(activeRouteLine) { scene.remove(activeRouteLine); activeRouteLine = null; }
             // Ocultar botón START si no hay operación activa
             if(!_fkActive) {
@@ -3768,49 +3921,13 @@
         }
         window.closeDetails = deselectItem;
 
-        // ── SOPORTE CLICK + TOUCH (móvil / pantallas táctiles) ──────
-        let _touchStartX = 0, _touchStartY = 0, _touchMoved = false;
-
-        function handlePickEvent(clientX, clientY) {
-            mouse.x = (clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const visibleBoxes = boxes.filter(b => b.userData.visualMesh.visible);
-            const intersects = raycaster.intersectObjects(visibleBoxes);
-            if(intersects.length > 0) selectItem(intersects[0].object); else deselectItem();
-        }
-
-        window.addEventListener('click', (event) => {
-            if(event.target.closest('.glass-panel')) return;
-            if(mapMode) return;
-            // En touch, el click se dispara también — lo ignoramos si ya lo manejó el touchend
-            if(event.sourceCapabilities && !event.sourceCapabilities.firesTouchEvents) {
-                handlePickEvent(event.clientX, event.clientY);
-            } else if(!('ontouchstart' in window)) {
-                // Dispositivo sin touch real
-                handlePickEvent(event.clientX, event.clientY);
-            }
-        });
-
-        window.addEventListener('touchstart', (event) => {
-            if(event.target.closest('.glass-panel')) return;
-            const t = event.touches[0];
-            _touchStartX = t.clientX;
-            _touchStartY = t.clientY;
-            _touchMoved = false;
-        }, { passive: true });
-
-        window.addEventListener('touchmove', () => {
-            _touchMoved = true;
-        }, { passive: true });
-
-        window.addEventListener('touchend', (event) => {
-            if(_touchMoved) return; // fue un arrastre (orbit), no un tap
-            if(event.target.closest('.glass-panel')) return;
-            if(mapMode) return;
-            // Usar la última posición registrada en touchstart
-            handlePickEvent(_touchStartX, _touchStartY);
-        }, { passive: true });
+        // ── CLICK + TOUCH ────────────────────────────────────────────────
+        let _tX=0,_tY=0,_tMoved=false;
+        function _pick(cx,cy){ mouse.x=(cx/window.innerWidth)*2-1; mouse.y=-(cy/window.innerHeight)*2+1; raycaster.setFromCamera(mouse,camera); const vis=boxes.filter(b=>b.userData.visualMesh.visible); const hit=raycaster.intersectObjects(vis); if(hit.length>0) selectItem(hit[0].object); else deselectItem(); }
+        window.addEventListener('click',(e)=>{ if(e.target.closest('.glass-panel')) return; if(mapMode) return; if(!('ontouchstart' in window)) _pick(e.clientX,e.clientY); });
+        window.addEventListener('touchstart',(e)=>{ const t=e.touches[0]; _tX=t.clientX; _tY=t.clientY; _tMoved=false; },{passive:true});
+        window.addEventListener('touchmove',()=>{ _tMoved=true; },{passive:true});
+        window.addEventListener('touchend',(e)=>{ if(_tMoved||e.target.closest('.glass-panel')||mapMode) return; _pick(_tX,_tY); },{passive:true});
 
         function selectItem(mesh) {
             deselectItem(); selectedBox = mesh; const vMesh = selectedBox.userData.visualMesh;
@@ -3827,12 +3944,15 @@
             const costContainer = document.getElementById('cost-container'); const statusContainer = document.getElementById('status-container');
             const alertBox = document.getElementById('alert-container');
 
+            // Ocultar sección slot vacío siempre al inicio
+            document.getElementById('slot-history-section').classList.add('hidden');
+            document.getElementById('slot-hist-panel').classList.add('hidden');
+            document.getElementById('slot-hist-toggle-icon').innerText = '▼';
+
             if(d.estadoStatus === 'Ocupado') {
                 title.innerText = "Detalle de Artículo"; statusContainer.classList.replace('border-red-500/50','border-slate-700/50');
                 document.getElementById('lbl-fecha-1').innerText = "Fecha Ingreso"; document.getElementById('detail-date-in').innerText = d.fechaIngreso;
-                document.getElementById('lbl-fecha-2').innerText = "Días Almacenado";
-                const diasActuales = calcDaysFromFechaIngreso(d.fechaIngreso, d.daysInWarehouse);
-                document.getElementById('detail-days').innerText = `${diasActuales} días`;
+                document.getElementById('lbl-fecha-2').innerText = "Días Almacenado"; document.getElementById('detail-days').innerText = `${d.daysInWarehouse} días`;
                 costContainer.classList.remove('hidden'); document.getElementById('detail-cost').innerText = formatter.format(d.costo);
                 document.getElementById('detail-peso').innerText = d.unidad === 'kg' ? `${d.peso} kg` : `${d.peso} ${d.unidad}`;
                 document.getElementById('detail-volumen').innerText = d.unidad === 'lt' ? `${d.volumen} lt` : '--'; document.getElementById('detail-unidad').innerText = d.unidad.toUpperCase();
@@ -3847,12 +3967,20 @@
                 else { badge.innerText = 'Bolsa'; badge.className = 'px-2 py-1 bg-sky-900/40 text-sky-400 border border-sky-500/30 rounded text-[9px] font-bold'; }
             } else {
                 title.innerText = "Espacio Disponible"; statusContainer.classList.replace('border-slate-700/50','border-red-500/50'); alertBox.classList.add('hidden');
-                document.getElementById('lbl-fecha-1').innerText = "Fecha Salida"; document.getElementById('detail-date-in').innerText = d.fechaSalida;
+                document.getElementById('lbl-fecha-1').innerText = "Fecha Salida"; document.getElementById('detail-date-in').innerText = d.fechaSalida || '--';
                 document.getElementById('lbl-fecha-2').innerText = "Último Material"; document.getElementById('detail-days').innerText = (d.tipoAnterior||'--').toUpperCase();
                 costContainer.classList.add('hidden'); document.getElementById('detail-peso').innerText = '-- kg'; document.getElementById('detail-volumen').innerText = '-- lt'; document.getElementById('detail-unidad').innerText = '--';
                 badge.innerText = 'VACÍO'; badge.className = 'px-2 py-1 bg-red-900/40 text-red-400 border border-red-500/30 rounded text-[9px] font-bold';
+                // Mostrar historial del slot
+                document.getElementById('slot-history-section').classList.remove('hidden');
+                _poblarUltimoOcupante(d);
+                _poblarHistorialSlot(d.slotKey || makeInventoryKey(d.estado, d.zona, d.rack, d.level, d.position));
             }
             document.getElementById('details-panel').classList.remove('hidden');
+            const _bt=document.getElementById('btn-transferir'); if(_bt){ if(d.estadoStatus==='Ocupado') _bt.classList.remove('hidden'); else _bt.classList.add('hidden'); }
+            toggleSelectedAuditPanel(d.estadoStatus === 'Ocupado');
+            renderSelectedAuditLog();
+            if(d.estadoStatus === 'Ocupado' && inventorySourceMode === 'supabase' && hasSupabaseConfig()) loadAuditLogNow(true);
 
             const est = estadosRed.find(e => e.id === d.estado);
             const btnWrap = document.getElementById('forklift-btn-wrap');
@@ -3897,41 +4025,12 @@
         };
 
         window.focusContainer = function() {
-            if(!selectedBox) return;
-            const pos = selectedBox.position;
-
-            // ── Compensar el panel de detalles izquierdo ─────────────────
-            // El panel tiene ~17rem (~272px). Calculamos cuánto representa
-            // ese ancho en unidades de mundo 3D a la distancia actual,
-            // y desplazamos el target hacia la derecha para que el objeto
-            // quede centrado en el área visible del canvas.
-            const panelEl = document.getElementById('details-panel');
-            const panelVisible = panelEl && !panelEl.classList.contains('hidden');
-            let offsetX = 0;
-            if(panelVisible) {
-                const panelW = panelEl.offsetWidth || 272;           // px
-                const canvasW = window.innerWidth;                   // px
-                // Fracción de pantalla ocupada por el panel
-                const fraction = panelW / canvasW;
-                // Distancia cámara→target actual
-                const camToTarget = camera.position.distanceTo(controls.target);
-                // FOV horizontal (radianes)
-                const vFovRad = camera.fov * Math.PI / 180;
-                const aspect  = camera.aspect;
-                const hFovRad = 2 * Math.atan(Math.tan(vFovRad / 2) * aspect);
-                // Cuántas unidades de mundo cubre la pantalla completa a esa distancia
-                const worldWidth = 2 * camToTarget * Math.tan(hFovRad / 2);
-                // Desplazamiento en X para centrar en el área libre
-                offsetX = -(fraction * worldWidth * 0.5);
-            }
-
-            const targetX = pos.x + offsetX;
-            new TWEEN.Tween(controls.target)
-                .to({x: targetX, y: pos.y, z: pos.z}, 1200)
-                .easing(TWEEN.Easing.Cubic.InOut).start();
-            new TWEEN.Tween(camera.position)
-                .to({x: targetX + 25, y: pos.y + 25, z: pos.z + 25}, 1200)
-                .easing(TWEEN.Easing.Cubic.InOut).start();
+            if(!selectedBox) return; const pos = selectedBox.position;
+            const panelEl=document.getElementById('details-panel'); let offsetX=0;
+            if(panelEl&&!panelEl.classList.contains('hidden')){ const frac=(panelEl.offsetWidth||272)/window.innerWidth; const d=camera.position.distanceTo(controls.target); const hw=2*d*Math.tan(camera.fov*Math.PI/360*camera.aspect); offsetX=-(frac*hw*0.5); }
+            const tx=pos.x+offsetX;
+            new TWEEN.Tween(controls.target).to({x:tx,y:pos.y,z:pos.z},1200).easing(TWEEN.Easing.Cubic.InOut).start();
+            new TWEEN.Tween(camera.position).to({x:tx+25,y:pos.y+25,z:pos.z+25},1200).easing(TWEEN.Easing.Cubic.InOut).start();
         };
 
         window.buscarSKU = function() {
@@ -4060,90 +4159,730 @@
 
 
     </script>
+    <!-- ═══ MODAL TRANSFERENCIA ════════════════════════════════════ -->
+    <div id="modal-transferencia" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.78);backdrop-filter:blur(4px);">
+      <div class="glass-panel rounded-2xl p-5 w-full max-w-md border-t-4 border-t-violet-500 pointer-events-auto" style="max-height:90vh;overflow-y:auto;">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+              Transferir Producto
+            </h2>
+            <p class="text-[10px] text-violet-300 mt-0.5">Solo muestra slots disponibles</p>
+          </div>
+          <button onclick="window.cerrarModalTransferencia()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <!-- Origen -->
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/50 mb-4">
+          <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Producto origen</div>
+          <div class="flex justify-between items-center">
+            <div>
+              <div id="tr-sku" class="font-mono font-bold text-sky-300 text-sm">--</div>
+              <div id="tr-origen" class="text-[10px] text-slate-400 mt-0.5">--</div>
+            </div>
+            <div class="text-right">
+              <div id="tr-costo" class="font-mono font-bold text-emerald-300 text-sm">$0</div>
+              <div id="tr-tipo" class="text-[9px] text-slate-400">--</div>
+            </div>
+          </div>
+        </div>
+        <!-- Destino -->
+        <div class="space-y-3">
+          <div class="text-[9px] text-violet-300 uppercase tracking-widest font-bold">Hub Destino</div>
+          <div>
+            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Estado / Hub <span id="tr-vacios-count" class="text-violet-400"></span></label>
+            <select id="tr-estado" onchange="window.onTransferEstadoChange()" class="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-600 font-bold focus:border-violet-500 focus:outline-none">
+              <option value="CDMX">Centro — CDMX</option>
+              <option value="NL">Hub Norte — Nuevo León</option>
+              <option value="JAL">Hub Occidente — Jalisco</option>
+              <option value="BC">Hub Frontera — Baja California</option>
+              <option value="YUC">Hub Sureste — Yucatán</option>
+              <option value="VER">Hub Golfo — Veracruz</option>
+              <option value="CHIH">Hub Noroeste — Chihuahua</option>
+              <option value="GTO">Hub Bajío — Guanajuato</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Zona</label>
+              <select id="tr-zona" onchange="window.onTransferZonaChange()" class="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-600 focus:border-violet-500 focus:outline-none">
+                <option value="ZONA A">Zona A</option>
+                <option value="ZONA B">Zona B</option>
+                <option value="ZONA C">Zona C</option>
+                <option value="ZONA D">Zona D</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Rack</label>
+              <select id="tr-rack" onchange="window.onTransferRackChange()" class="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-600 focus:border-violet-500 focus:outline-none"></select>
+            </div>
+            <div>
+              <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Nivel</label>
+              <select id="tr-level" onchange="window.onTransferLevelChange()" class="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-600 focus:border-violet-500 focus:outline-none"></select>
+            </div>
+            <div>
+              <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Posición</label>
+              <select id="tr-position" onchange="window.onTransferPosChange()" class="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-600 focus:border-violet-500 focus:outline-none"></select>
+            </div>
+          </div>
+          <div id="tr-slot-status" class="hidden rounded-lg px-3 py-2.5 text-xs font-mono border"></div>
+          <div>
+            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Nueva nomenclatura / SKU destino <span class="text-violet-400">(opcional)</span></label>
+            <div class="flex gap-2">
+              <input id="tr-new-sku" type="text" placeholder="Dejar vacío = mantener SKU" oninput="this.value=this.value.toUpperCase()" class="flex-1 bg-slate-900 text-violet-200 text-sm px-3 py-2 rounded-lg border border-violet-500/50 focus:border-violet-400 focus:outline-none font-mono">
+              <button type="button" onclick="window.autoSuggestSKU()" class="text-[10px] px-2 py-2 rounded-lg border border-violet-500/40 text-violet-300 hover:bg-violet-900/40 transition-colors">✨</button>
+            </div>
+          </div>
+          <div>
+            <label class="text-[8px] text-slate-400 uppercase tracking-widest block mb-1">Notas (opcional)</label>
+            <input id="tr-notas" type="text" placeholder="Motivo del traslado..." class="w-full bg-slate-800 text-white text-sm px-3 py-2 rounded-lg border border-slate-600 focus:border-violet-500 focus:outline-none">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-5">
+          <button onclick="window.cerrarModalTransferencia()" class="bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg text-sm font-bold">Cancelar</button>
+          <button id="btn-confirmar-transfer" onclick="window.confirmarTransferencia()" class="py-2.5 rounded-lg text-sm font-bold" style="background:linear-gradient(135deg,rgba(139,92,246,.8),rgba(109,40,217,.9));color:white;border:1px solid rgba(139,92,246,.6);">✅ Confirmar</button>
+        </div>
+      </div>
+    </div>
 
-<!-- SOLO SE MUESTRA LA PARTE MODIFICADA / AGREGADA -->
+    <script>
+    // ═══ SISTEMA DE TRANSFERENCIA (scope global) ═════════════════════
+    var _trSrc = null;
 
-<script>
-// ===============================
-// AUTO-CONEXION SUPABASE
-// ===============================
-
-window.addEventListener('load', async () => {
-  loadSavedSupabaseConfig();
-  await autoInitDataSource();
-});
-
-function loadSavedSupabaseConfig() {
-  const url = localStorage.getItem('sb_url');
-  const key = localStorage.getItem('sb_key');
-
-  if (url) document.getElementById('supabase-url').value = url;
-  if (key) document.getElementById('supabase-anon-key').value = key;
-}
-
-function saveSupabaseConfig() {
-  const url = document.getElementById('supabase-url').value;
-  const key = document.getElementById('supabase-anon-key').value;
-
-  localStorage.setItem('sb_url', url);
-  localStorage.setItem('sb_key', key);
-
-  setCsvStatus('Configuración guardada');
-}
-
-async function autoInitDataSource() {
-  const url = document.getElementById('supabase-url').value;
-  const key = document.getElementById('supabase-anon-key').value;
-
-  if (!url || !key) {
-    setCsvStatus('Modo local (sin Supabase)');
-    return;
-  }
-
-  try {
-    await connectSupabaseNow();
-
-    const { data, error } = await supabase
-      .from('inventory_items')
-      .select('*')
-      .limit(1);
-
-    if (error) throw error;
-
-    if (data && data.length > 0) {
-      setCsvStatus('Conectado a Supabase ✓');
-      await pullSupabaseNow();
-    } else {
-      setCsvStatus('Supabase vacío → usa "Migrar Inventario"');
+    function _getVacios(estado, zona) {
+        if(!_trSrc) return [];
+        var srcKey = makeInventoryKey(_trSrc.estado, _trSrc.zona, _trSrc.rack, _trSrc.level, _trSrc.position);
+        return inventoryRows.filter(function(r) {
+            var slotKey = makeInventoryKey(r.estado, r.zona, r.rack, r.level, r.position);
+            return r.estado === estado && r.zona === zona &&
+                   r.estadoStatus !== 'Ocupado' &&
+                   slotKey !== srcKey &&
+                   slotMeshIndex.has(slotKey);
+        });
     }
 
-  } catch (err) {
-    console.warn('Fallback CSV', err);
-    setCsvStatus('Error Supabase → usando CSV');
-  }
-}
+    function _poblarRacks(vacios) {
+        var sel = document.getElementById('tr-rack');
+        var racks = [...new Set(vacios.map(function(r){ return r.rack; }))].sort();
+        sel.innerHTML = racks.length ? racks.map(function(r){ return '<option value="'+r+'">'+r+'</option>'; }).join('') : '<option value="">Sin espacio</option>';
+        _poblarLevels(vacios);
+    }
 
-// ===============================
-// MEJORA: STATUS VISUAL
-// ===============================
+    function _poblarLevels(vacios) {
+        var rack = document.getElementById('tr-rack').value;
+        var sel  = document.getElementById('tr-level');
+        var filt = vacios.filter(function(r){ return r.rack === rack; });
+        var lvls = [...new Set(filt.map(function(r){ return r.level; }))].sort();
+        sel.innerHTML = lvls.length ? lvls.map(function(l){ return '<option value="'+l+'">'+l+'</option>'; }).join('') : '<option value="">—</option>';
+        _poblarPos(vacios);
+    }
 
-function setCsvStatus(msg) {
-  const el = document.getElementById('csv-status');
-  if (el) el.innerText = msg;
-}
+    function _poblarPos(vacios) {
+        var rack  = document.getElementById('tr-rack').value;
+        var level = document.getElementById('tr-level').value;
+        var sel   = document.getElementById('tr-position');
+        var filt  = vacios.filter(function(r){ return r.rack === rack && r.level === level; });
+        var poss  = [...new Set(filt.map(function(r){ return r.position; }))].sort();
+        sel.innerHTML = poss.length ? poss.map(function(p){ return '<option value="'+p+'">'+p+'</option>'; }).join('') : '<option value="">—</option>';
+        window.onTransferPosChange();
+    }
 
-// ===============================
-// OPCIONAL: AUTO GUARDAR CONFIG
-// ===============================
+    function _poblarTodo() {
+        var estado = document.getElementById('tr-estado').value;
+        var zona   = document.getElementById('tr-zona').value;
+        var vacios = _getVacios(estado, zona);
+        var cnt    = document.getElementById('tr-vacios-count');
+        if(cnt) cnt.innerText = vacios.length ? '('+vacios.length+' libres)' : '(sin espacio)';
+        _poblarRacks(vacios);
+    }
 
-document.getElementById('supabase-url')?.addEventListener('change', saveSupabaseConfig);
-document.getElementById('supabase-anon-key')?.addEventListener('change', saveSupabaseConfig);
+    window.abrirModalTransferencia = function() {
+        if(!selectedBox || selectedBox.userData.estadoStatus !== 'Ocupado') return;
+        var d = selectedBox.userData;
+        _trSrc = inventoryIndex.get(d.slotKey) || d;
+        document.getElementById('tr-sku').innerText    = d.sku || d.id || '--';
+        document.getElementById('tr-origen').innerText = (d.estadoNombre||d.estado)+' · '+d.zona+' · '+d.rack+' · '+d.level+' · '+d.position;
+        document.getElementById('tr-costo').innerText  = formatter.format(d.costo||0);
+        document.getElementById('tr-tipo').innerText   = (d.type||'--').toUpperCase();
+        document.getElementById('tr-notas').value      = '';
+        document.getElementById('tr-new-sku').value    = '';
+        document.getElementById('tr-slot-status').classList.add('hidden');
+        // Seleccionar hub diferente al origen por defecto
+        var sel = document.getElementById('tr-estado');
+        for(var i=0; i<sel.options.length; i++) { if(sel.options[i].value !== d.estado){ sel.value = sel.options[i].value; break; } }
+        _poblarTodo();
+        document.getElementById('modal-transferencia').classList.remove('hidden');
+    };
 
-</script>
+    window.cerrarModalTransferencia = function() {
+        document.getElementById('modal-transferencia').classList.add('hidden');
+        _trSrc = null;
+    };
 
-<!-- FIN DE CAMBIOS -->
+    window.onTransferEstadoChange = function() { _poblarTodo(); };
+    window.onTransferZonaChange   = function() { _poblarTodo(); };
+    window.onTransferRackChange   = function() {
+        var estado = document.getElementById('tr-estado').value;
+        var zona   = document.getElementById('tr-zona').value;
+        _poblarLevels(_getVacios(estado, zona));
+    };
+    window.onTransferLevelChange  = function() {
+        var estado = document.getElementById('tr-estado').value;
+        var zona   = document.getElementById('tr-zona').value;
+        _poblarPos(_getVacios(estado, zona));
+    };
+    window.onTransferPosChange    = function() {
+        if(!_trSrc) return;
+        var estado   = document.getElementById('tr-estado').value;
+        var zona     = document.getElementById('tr-zona').value;
+        var rack     = document.getElementById('tr-rack').value;
+        var level    = document.getElementById('tr-level').value;
+        var position = document.getElementById('tr-position').value;
+        var ss       = document.getElementById('tr-slot-status');
+        var btn      = document.getElementById('btn-confirmar-transfer');
+        if(!rack || !level || !position) { ss.className='rounded-lg px-3 py-2.5 text-xs font-mono border bg-amber-900/30 border-amber-500/40 text-amber-300'; ss.innerText='⚠️ Sin slots vacíos en esta combinación.'; ss.classList.remove('hidden'); btn.disabled=true; return; }
+        var destKey  = makeInventoryKey(estado, zona, rack, level, position);
+        var srcKey   = makeInventoryKey(_trSrc.estado, _trSrc.zona, _trSrc.rack, _trSrc.level, _trSrc.position);
+        if(destKey === srcKey) { ss.className='rounded-lg px-3 py-2.5 text-xs font-mono border bg-amber-900/30 border-amber-500/40 text-amber-300'; ss.innerText='⚠️ Mismo slot de origen.'; ss.classList.remove('hidden'); btn.disabled=true; return; }
+        var destEst = estadosRed.find(function(e){ return e.id===estado; });
+        ss.className = 'rounded-lg px-3 py-2.5 text-xs font-mono border bg-emerald-900/30 border-emerald-500/40 text-emerald-300';
+        ss.innerText = '✅ Slot libre en '+(destEst?destEst.nombre:estado);
+        ss.classList.remove('hidden');
+        btn.disabled = false;
+    };
+
+    window.autoSuggestSKU = function() {
+        if(!_trSrc) return;
+        var estado   = document.getElementById('tr-estado').value;
+        var zona     = document.getElementById('tr-zona').value;
+        var rack     = document.getElementById('tr-rack').value;
+        var original = _trSrc.sku || _trSrc.id || '';
+        var suffix   = (original.match(/(\d+)$/) || ['',''])[1];
+        var zi       = zona.replace('ZONA ','');
+        var rn       = rack.replace(/[^0-9]/g,'');
+        document.getElementById('tr-new-sku').value = [estado,zi,rn,suffix].filter(Boolean).join('-');
+    };
+    function _makeTravelMesh(record, startPos) {
+        var group = new THREE.Group();
+        var baseColor = record.type === 'costal' ? 0xf59e0b : (record.type === 'bolsa' ? 0x22d3ee : 0x60a5fa);
+        var bodyGeo = record.type === 'costal'
+            ? new THREE.SphereGeometry(2.8, 18, 18)
+            : new THREE.BoxGeometry(5.2, 5.2, 5.2);
+        var body = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({
+            color: baseColor,
+            transparent: true,
+            opacity: 0.96
+        }));
+        group.add(body);
+
+        var core = new THREE.Mesh(
+            new THREE.SphereGeometry(1.2, 14, 14),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
+        );
+        group.add(core);
+
+        var halo = new THREE.Mesh(
+            new THREE.SphereGeometry(4.8, 20, 20),
+            new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0.18, depthWrite: false })
+        );
+        group.add(halo);
+
+        var ring = new THREE.Mesh(
+            new THREE.TorusGeometry(4.2, 0.22, 10, 32),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false })
+        );
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+
+        var beam = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.3, 0.8, 11, 10, 1, true),
+            new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0.24, depthWrite: false })
+        );
+        beam.position.y = -1.2;
+        group.add(beam);
+
+        var labelCanvas = document.createElement('canvas');
+        labelCanvas.width = 512;
+        labelCanvas.height = 128;
+        var ctx = labelCanvas.getContext('2d');
+        ctx.fillStyle = 'rgba(2,6,23,0.0)';
+        ctx.fillRect(0, 0, 512, 128);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(6, 6, 500, 116);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 42px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText((record.sku || record.id || 'SKU').slice(0, 18), 256, 78);
+        var label = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(labelCanvas),
+            transparent: true,
+            depthWrite: false
+        }));
+        label.position.set(0, 7.4, 0);
+        label.scale.set(16, 4, 1);
+        group.add(label);
+
+        group.position.copy(startPos);
+        return group;
+    }
+    function _pulseSlot(slotKey, color, label) {
+        var box = slotMeshIndex.get(slotKey);
+        if(!box) return;
+        var ring = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.2, 2.2, 0.22, 28),
+            new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.78, depthWrite: false })
+        );
+        ring.position.set(box.position.x, Math.max(0.45, box.position.y - 0.8), box.position.z);
+        scene.add(ring);
+        new TWEEN.Tween(ring.scale).to({ x: 5.4, y: 1, z: 5.4 }, 950).easing(TWEEN.Easing.Cubic.Out).start();
+        new TWEEN.Tween(ring.material).to({ opacity: 0 }, 950).easing(TWEEN.Easing.Cubic.Out).onComplete(function(){
+            scene.remove(ring);
+            ring.geometry.dispose();
+            ring.material.dispose();
+        }).start();
+        if(label) {
+            var toast=document.createElement('div');
+            toast.style.cssText='position:fixed;top:1.1rem;right:1.1rem;background:rgba(15,23,42,.94);border:1px solid rgba(148,163,184,.35);color:#e2e8f0;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;z-index:10000;box-shadow:0 0 22px rgba(15,23,42,.4);';
+            toast.innerText=label;
+            document.body.appendChild(toast);
+            setTimeout(function(){ toast.style.transition='opacity .45s'; toast.style.opacity='0'; },1400);
+            setTimeout(function(){ toast.remove(); },1900);
+        }
+    }
+
+    window.confirmarTransferencia = async function() {
+        if(!_trSrc) return;
+        var estadoDest   = document.getElementById('tr-estado').value;
+        var zonaDest     = document.getElementById('tr-zona').value;
+        var rackDest     = document.getElementById('tr-rack').value;
+        var levelDest    = document.getElementById('tr-level').value;
+        var positionDest = document.getElementById('tr-position').value;
+        var notasExtra   = document.getElementById('tr-notas').value.trim();
+        var nuevoSku     = (document.getElementById('tr-new-sku').value||'').trim().toUpperCase();
+
+        var srcKey  = makeInventoryKey(_trSrc.estado, _trSrc.zona, _trSrc.rack, _trSrc.level, _trSrc.position);
+        var destKey = makeInventoryKey(estadoDest, zonaDest, rackDest, levelDest, positionDest);
+        if(srcKey === destKey) return;
+
+        var destRecord = inventoryIndex.get(destKey);
+        if(destRecord && destRecord.estadoStatus === 'Ocupado') { alert('Slot ocupado.'); return; }
+
+        var skuFinal       = nuevoSku || _trSrc.sku || _trSrc.id || 'Producto';
+        var estadoDestNom  = (estadosRed.find(function(e){ return e.id===estadoDest; })||{}).nombre || estadoDest;
+        var srcBox         = boxes.find(function(b){ return b.userData.slotKey === srcKey; });
+        var srcPos3D       = srcBox ? srcBox.position.clone() : null;
+
+        var nextRecord = normalizeInventoryRecord(Object.assign({}, _trSrc, {
+            sku: skuFinal, id: skuFinal,
+            estado: estadoDest, estadoNombre: estadoDestNom,
+            zona: zonaDest, rack: rackDest, level: levelDest, position: positionDest,
+            slotIndex: slotIndexFromPosition(positionDest),
+            notas: 'Transferido desde '+_trSrc.estado+'\u00b7'+_trSrc.zona+'\u00b7'+_trSrc.rack+(notasExtra?' '+notasExtra:'')
+        }));
+
+        var srcLoc     = parseInventoryKey(srcKey);
+        var emptyRec   = createEmptyInventoryRecord(srcLoc.estado,srcLoc.zona,srcLoc.rack,srcLoc.level,srcLoc.position,srcLoc.slotIndex,inventoryStateName(srcLoc.estado));
+        var distancia  = (distanciaMatrix[_trSrc.estado]&&distanciaMatrix[_trSrc.estado][estadoDest])||0;
+
+        // Cerrar modal antes de animar
+        window.cerrarModalTransferencia();
+        deselectItem();
+
+        var srcHitBox=slotMeshIndex.get(srcKey);
+        var destHitBox=slotMeshIndex.get(destKey);
+        var destPos3D = destHitBox ? destHitBox.position.clone() : null;
+        var transferApplied = false;
+        var sourceVisual = srcHitBox && srcHitBox.userData ? srcHitBox.userData.visualMesh : null;
+        function applyTransferState() {
+            if(transferApplied) return;
+            transferApplied = true;
+
+            // Guardar historial del slot origen ANTES de vaciarlo
+            var srcRecord = inventoryIndex.get(srcKey);
+            if(srcRecord && srcRecord.estadoStatus === 'Ocupado') {
+                var now = new Date();
+                var histEntry = {
+                    sku:          srcRecord.sku || srcRecord.id || 'SKU',
+                    tipo:         srcRecord.type || '--',
+                    contenido:    srcRecord.contenido || '--',
+                    costo:        srcRecord.costo || 0,
+                    fechaIngreso: srcRecord.fechaIngreso || '--',
+                    fechaSalida:  now.toISOString().slice(0,10),
+                    fechaSalidaTs:now.getTime(),
+                    destino:      estadoDest,
+                    destinoNom:   estadoDestNom
+                };
+                if(!window._slotHistory) window._slotHistory = {};
+                if(!window._slotHistory[srcKey]) window._slotHistory[srcKey] = [];
+                window._slotHistory[srcKey].unshift(histEntry);
+                // Enriquecer el registro vacío
+                emptyRec.lastSku          = histEntry.sku;
+                emptyRec.lastTipo         = histEntry.tipo;
+                emptyRec.lastContenido    = histEntry.contenido;
+                emptyRec.lastCosto        = histEntry.costo;
+                emptyRec.lastFechaIngreso = histEntry.fechaIngreso;
+                emptyRec.lastFechaSalida  = histEntry.fechaSalida;
+                emptyRec.lastDestino      = histEntry.destino;
+                emptyRec.lastDestinoNom   = histEntry.destinoNom;
+            }
+
+            var beforeDest=inventoryIndex.get(destKey);
+            mutateSlotRecord(destKey, nextRecord);
+            var afterDest=inventoryIndex.get(destKey);
+            mutateSlotRecord(srcKey, emptyRec);
+            refreshSlotMesh(srcKey);
+            refreshSlotMesh(destKey);
+            _pulseSlot(srcKey, 0xf97316, 'Origen liberado: ' + srcKey);
+            setTimeout(function(){ _pulseSlot(destKey, 0x22c55e, 'Destino ocupado: ' + destKey); }, 260);
+            if(typeof currentHeatmap!=='undefined' && currentHeatmap!=='none') toggleHeatmap(currentHeatmap);
+            aplicarFiltrosUI(false);
+            renderInventoryManager();
+            Promise.resolve().then(async function(){
+                try {
+                    if(inventorySourceMode === 'supabase' && hasSupabaseConfig()) {
+                        await pushInventoryRowToSupabase(nextRecord);
+                        await pushInventoryRowToSupabase(emptyRec);
+                        await pushAuditLogToSupabase(
+                            'move_update',
+                            destKey,
+                            'Transferencia modal: ' + srcKey + ' -> ' + destKey + ' (' + skuFinal + ')',
+                            { before_slot: srcKey, after_slot: destKey, record: nextRecord, notes: notasExtra || '' }
+                        );
+                        await loadAuditLogNow(true);
+                        setCsvStatus('Transferencia sincronizada con Supabase: ' + srcKey + ' -> ' + destKey, 'success');
+                    } else {
+                        setCsvStatus('Transferencia aplicada localmente. Conecta Supabase para persistirla en la nube.', 'warning');
+                    }
+                } catch(e) {
+                    console.warn('Transfer sync error:', e);
+                    setCsvStatus('La transferencia llego al destino, pero no se pudo escribir en Supabase: ' + e.message, 'error');
+                }
+            });
+        }
+
+        // 2. Animación visual (independiente)
+        if(srcHitBox && destHitBox && srcPos3D && destPos3D) {
+            try {
+                var travelMesh = _makeTravelMesh(nextRecord, srcPos3D);
+                setCsvStatus('Transferencia en curso. Visualizando trayecto del SKU...', 'info');
+                setTimeout(function(){
+                    if(sourceVisual) sourceVisual.visible = false;
+                }, 320);
+                _animarVuelo(nextRecord, srcPos3D, destPos3D, distancia, destKey, estadoDestNom, travelMesh, function(){
+                    applyTransferState();
+                }, null);
+            }
+            catch(e) {
+                console.warn('Anim error:', e);
+                if(sourceVisual) sourceVisual.visible = true;
+                applyTransferState();
+                setCsvStatus('El inventario se movio, pero la animacion del vuelo fallo: ' + e.message, 'warning');
+            }
+        } else {
+            applyTransferState();
+        }
+    };
+
+    // ── ANIMACIÓN DE VUELO ──────────────────────────────────────────
+
+    // Crea una copia visual del producto para animarlo en el arco
+    function _makeTravelMesh(record, pos) {
+        var geo, mat;
+        var type = (record.type || 'caja').toLowerCase();
+        if(type === 'caja' || type === 'box') {
+            geo = new THREE.BoxGeometry(3.5, 3.5, 3.5);
+            mat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+        } else if(type === 'costal' || type === 'sack') {
+            geo = new THREE.SphereGeometry(2.2, 8, 6);
+            mat = new THREE.MeshBasicMaterial({ color: 0xa16207 });
+        } else {
+            geo = new THREE.SphereGeometry(2.0, 8, 6);
+            mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        }
+        var mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        return mesh;
+    }
+
+    // Flash de color en un slot (origen o destino)
+    function _pulseSlot(slotKey, color, label) {
+        var hitBox = slotMeshIndex ? slotMeshIndex.get(slotKey) : null;
+        if(!hitBox || !hitBox.userData || !hitBox.userData.visualMesh) return;
+        var vm = hitBox.userData.visualMesh;
+        var origMat = vm.material;
+        var flashMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.9 });
+        vm.material = flashMat;
+        setTimeout(function(){ vm.material = origMat; }, 380);
+    }
+
+    var _aArc=null, _aPkt=null, _aLight=null, _aTrail=[], _aActive=false;
+
+    function _animarVuelo(record, srcPos3D, destPos3D, distancia, destKey, destEstadoNombre, travelMesh, onArrive, onPersist) {
+        // Limpiar animación previa si la hay
+        _limpiarAnim();
+        _aActive = true;
+
+        var sx = srcPos3D.x, sy = srcPos3D.y, sz = srcPos3D.z;
+        var dx = destPos3D.x, dy = destPos3D.y, dz = destPos3D.z;
+        var dist = Math.hypot(dx-sx, dz-sz);
+        var peak = Math.max(28, Math.min(110, dist * 0.45));
+        var lift = Math.max(12, Math.min(28, dist * 0.16));
+
+        // Construir curva arco
+        var pts = [];
+        for(var i=0;i<=80;i++){
+            var t=i/80;
+            pts.push(new THREE.Vector3(
+                sx + (dx - sx) * t,
+                sy + (dy - sy) * t + lift + peak * Math.sin(Math.PI * t),
+                sz + (dz - sz) * t
+            ));
+        }
+        var curve = new THREE.CatmullRomCurve3(pts);
+
+        // Arco visual
+        var arcGeo = new THREE.TubeGeometry(curve, 80, 1.1, 8, false);
+        var arcMat = new THREE.MeshBasicMaterial({color:0x8b5cf6, transparent:true, opacity:0, depthWrite:false});
+        _aArc = new THREE.Mesh(arcGeo, arcMat);
+        scene.add(_aArc);
+        // Fade in arco
+        new TWEEN.Tween(arcMat).to({opacity:0.92}, 420).easing(TWEEN.Easing.Quadratic.Out).start();
+
+        // Producto viajando
+        var p0 = curve.getPoint(0);
+        _aPkt = travelMesh || makeVisualMesh(record, p0.clone());
+        _aPkt.position.copy(p0);
+        scene.add(_aPkt);
+        _aLight = new THREE.PointLight(0x38bdf8, 5, 260);
+        _aLight.position.copy(p0); scene.add(_aLight);
+
+        var VUELO = Math.max(2600, Math.min(5600, distancia>0 ? distancia*3.2 : 3600));
+
+        // FASE 0: encuadre del origen
+        if(controls) controls.enabled = false;
+        new TWEEN.Tween(controls.target).to({x:sx,y:sy+6,z:sz},650).easing(TWEEN.Easing.Cubic.Out).start();
+        new TWEEN.Tween(camera.position).to({x:sx+26,y:sy+24,z:sz+26},650).easing(TWEEN.Easing.Cubic.Out).start();
+
+        // FASE 1: vuelo continuo entre slots
+        var t0;
+        setTimeout(function(){
+            t0 = performance.now();
+            function fly(now){
+                if(!_aActive) return;
+                var raw = Math.min(1,(now-t0)/VUELO);
+                var te  = raw<0.5 ? 2*raw*raw : -1+(4-2*raw)*raw;
+                var p   = curve.getPoint(te);
+                if(_aPkt){
+                    _aPkt.position.copy(p);
+                    _aPkt.rotation.y += 0.035;
+                    _aPkt.scale.setScalar(1.0 + 0.08*Math.sin(now*0.012));
+                }
+                if(_aLight) _aLight.position.copy(p);
+                // Cámara sigue al producto
+                var pNext = curve.getPoint(Math.min(te+0.02,1));
+                var dirX  = pNext.x-p.x, dirZ=pNext.z-p.z;
+                var dLen  = Math.sqrt(dirX*dirX+dirZ*dirZ)||1;
+                dirX/=dLen; dirZ/=dLen;
+                camera.position.copy(new THREE.Vector3(p.x-dirX*18, p.y+16, p.z-dirZ*18));
+                controls.target.copy(new THREE.Vector3(p.x,p.y+1.2,p.z));
+                // Estela
+                if(Math.random()<0.3){
+                    var sm=new THREE.Mesh(new THREE.SphereGeometry(0.4+Math.random()*0.6,4,4),new THREE.MeshBasicMaterial({color:Math.random()>0.5?0x8b5cf6:0x38bdf8,transparent:true,opacity:0.7}));
+                    sm.position.copy(p); sm._born=now; scene.add(sm); _aTrail.push(sm);
+                }
+                _aTrail=_aTrail.filter(function(m){ var age=(now-m._born)/600; if(age>1){scene.remove(m);return false;} m.material.opacity=0.7*(1-age); return true; });
+                if(raw<1) requestAnimationFrame(fly);
+                else _finalizarAnim(destPos3D, destKey, record.sku || record.id || 'Producto', VUELO, destEstadoNombre, onArrive, onPersist);
+            }
+            requestAnimationFrame(fly);
+        }, 520);
+    }
+
+    function _finalizarAnim(destPos3D, destKey, sku, VUELO, destEstadoNombre, onArrive, onPersist) {
+        // Flash llegada
+        if(_aLight){ _aLight.intensity=15; setTimeout(function(){ if(_aLight)_aLight.intensity=0; },500); }
+        // Fade out arco
+        if(_aArc) new TWEEN.Tween(_aArc.material).to({opacity:0},600).easing(TWEEN.Easing.Quadratic.In).onComplete(function(){ if(_aArc){scene.remove(_aArc);_aArc=null;} }).start();
+        // Zoom al slot destino
+        var destBox = boxes.find(function(b){ return b.userData.slotKey===destKey; });
+        var dX = destBox ? destBox.position.x : destPos3D.x;
+        var dY = destBox ? destBox.position.y : destPos3D.y;
+        var dZ = destBox ? destBox.position.z : destPos3D.z;
+        setTimeout(function(){
+            if(typeof onArrive === 'function') onArrive();
+            new TWEEN.Tween(controls.target).to({x:dX,y:dY,z:dZ},1400).easing(TWEEN.Easing.Exponential.InOut).start();
+            new TWEEN.Tween(camera.position).to({x:dX+50,y:dY+60,z:dZ+50},1400).easing(TWEEN.Easing.Exponential.InOut).start();
+            setTimeout(function(){
+                _limpiarAnim();
+                if(typeof onPersist === 'function') onPersist();
+                destBox = boxes.find(function(b){ return b.userData.slotKey===destKey; });
+                if(destBox) {
+                    aplicarFiltrosUI(false);
+                    selectItem(destBox);
+                }
+                // Toast
+                var toast=document.createElement('div');
+                toast.style.cssText='position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:rgba(52,211,153,.96);border:1px solid rgba(52,211,153,.6);color:#022c22;padding:11px 26px;border-radius:12px;font-size:13px;font-weight:bold;z-index:9999;box-shadow:0 0 28px rgba(52,211,153,.45);white-space:nowrap;';
+                toast.innerText='\u2705 '+sku+' recibido en '+(destEstadoNombre || destKey);
+                document.body.appendChild(toast);
+                setTimeout(function(){ toast.style.transition='opacity .5s'; toast.style.opacity='0'; },3200);
+                setTimeout(function(){ toast.remove(); },3800);
+                // Filtrar a hub destino
+                if(destBox && destBox.userData && destBox.userData.estado){
+                    currentStateHub=destBox.userData.estado;
+                    document.getElementById('state-filter').value=destBox.userData.estado;
+                    aplicarFiltrosUI(false);
+                }
+                if(controls) controls.enabled = true;
+            }, 1600);
+        }, 300);
+    }
+
+    function _limpiarAnim(){
+        _aActive=false;
+        if(_aArc)  { scene.remove(_aArc);  _aArc=null;  }
+        if(_aPkt)  { scene.remove(_aPkt);  _aPkt=null;  }
+        if(_aLight){ scene.remove(_aLight);_aLight=null; }
+        _aTrail.forEach(function(m){ scene.remove(m); }); _aTrail=[];
+        if(controls) controls.enabled = true;
+    }
+
+
+    // ══════════════════════════════════════════════════════════════════
+    // HISTORIAL DEL SLOT VACÍO
+    // ══════════════════════════════════════════════════════════════════
+
+    window.toggleSlotHistoryPanel = function() {
+        var panel = document.getElementById('slot-hist-panel');
+        var icon  = document.getElementById('slot-hist-toggle-icon');
+        if(!panel || !icon) return;
+        var open = panel.classList.toggle('hidden');
+        icon.innerText = open ? '▼' : '▲';
+        if(!open && selectedBox) {
+            var d = selectedBox.userData;
+            _poblarHistorialSlot(d.slotKey || makeInventoryKey(d.estado, d.zona, d.rack, d.level, d.position));
+        }
+    };
+
+    // Pobla la tarjeta de "Último Ocupante"
+    function _poblarUltimoOcupante(d) {
+        var card  = document.getElementById('last-occ-card');
+        var empty = document.getElementById('last-occ-empty');
+
+        var lastSku = d.lastSku || '';
+        if(!lastSku) { card.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+
+        empty.classList.add('hidden'); card.classList.remove('hidden');
+        document.getElementById('last-occ-sku').innerText      = lastSku;
+        document.getElementById('last-occ-badge').innerText    = (d.lastTipo || '--').toUpperCase();
+        document.getElementById('last-occ-entrada').innerText  = d.lastFechaIngreso || '--';
+        document.getElementById('last-occ-salida').innerText   = d.lastFechaSalida  || '--';
+        document.getElementById('last-occ-destino').innerText  = d.lastDestinoNom   || d.lastDestino || '--';
+        document.getElementById('last-occ-contenido').innerText= d.lastContenido    || '--';
+
+        // Calcular días que estuvo
+        var dias = '--';
+        if(d.lastFechaIngreso && d.lastFechaIngreso !== '--' && d.lastFechaSalida && d.lastFechaSalida !== '--') {
+            var diff = Math.floor((new Date(d.lastFechaSalida) - new Date(d.lastFechaIngreso)) / 86400000);
+            dias = diff >= 0 ? diff + ' días' : '--';
+        }
+        document.getElementById('last-occ-dias').innerText = dias;
+
+        var costoEl = document.getElementById('last-occ-costo');
+        try { costoEl.innerText = formatter.format(d.lastCosto || 0); } catch(e) { costoEl.innerText = '$' + (d.lastCosto || 0); }
+    }
+
+    // Pobla el historial completo del slot (sesión + Supabase)
+    function _poblarHistorialSlot(slotKey) {
+        var statusEl = document.getElementById('slot-hist-status');
+        var listEl   = document.getElementById('slot-hist-list');
+        if(!statusEl || !listEl) return;
+        listEl.innerHTML = '';
+
+        // ── Historial en memoria (sesión actual) ─────────────────────
+        var sesion = (window._slotHistory && window._slotHistory[slotKey]) || [];
+        if(sesion.length) {
+            var sesHeader = document.createElement('div');
+            sesHeader.style.cssText = 'font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:2px;font-weight:bold;margin-bottom:4px;';
+            sesHeader.innerText = '— Sesión actual —';
+            listEl.appendChild(sesHeader);
+            sesion.forEach(function(e) {
+                listEl.appendChild(_buildHistEntry(e, false));
+            });
+            statusEl.innerText = '';
+        } else {
+            statusEl.innerText = 'Sin movimientos registrados en esta sesión.';
+        }
+
+        // ── Historial Supabase ───────────────────────────────────────
+        if(typeof inventorySourceMode !== 'undefined' && inventorySourceMode === 'supabase'
+            && typeof hasSupabaseConfig === 'function' && hasSupabaseConfig()) {
+            statusEl.innerText = '⏳ Consultando Supabase...';
+            _fetchSlotAuditLog(slotKey).then(function(rows) {
+                if(rows.length) {
+                    statusEl.innerText = '';
+                    var sbHeader = document.createElement('div');
+                    sbHeader.style.cssText = 'font-size:8px;color:#818cf8;text-transform:uppercase;letter-spacing:2px;font-weight:bold;margin:6px 0 4px;';
+                    sbHeader.innerText = '— Historial Supabase —';
+                    listEl.appendChild(sbHeader);
+                    rows.forEach(function(r) { listEl.appendChild(_buildHistEntry(r, true)); });
+                } else {
+                    if(!sesion.length) statusEl.innerText = 'Sin movimientos en Supabase para este slot.';
+                }
+            }).catch(function() {
+                if(!sesion.length) statusEl.innerText = 'No se pudo consultar Supabase.';
+            });
+        }
+    }
+
+    // Construye una tarjeta de entrada de historial
+    function _buildHistEntry(e, fromSupabase) {
+        var div = document.createElement('div');
+        div.style.cssText = 'background:rgba(15,23,42,.7);border:1px solid rgba(51,65,85,.5);border-radius:8px;padding:7px 9px;font-size:10px;';
+        var skuColor  = fromSupabase ? '#a5b4fc' : '#7dd3fc';
+        var destColor = '#c4b5fd';
+        div.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+              '<span style="font-family:monospace;font-weight:bold;color:'+skuColor+';">' + (e.sku||e.after_sku||'SKU') + '</span>' +
+              '<span style="font-size:8px;color:#64748b;">' + (e.fechaSalida||e.created_at||'').slice(0,10) + '</span>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">' +
+              '<div style="color:#94a3b8;">Tipo: <span style="color:#e2e8f0;">' + (e.tipo||e.type||'--') + '</span></div>' +
+              '<div style="color:#94a3b8;">Días: <span style="color:#fbbf24;">' + _calcDias(e.fechaIngreso||'', e.fechaSalida||'') + '</span></div>' +
+              '<div style="color:#94a3b8;grid-column:1/-1;">→ <span style="color:'+destColor+';font-weight:bold;">' + (e.destinoNom||e.destino||e.after_estado||'--') + '</span></div>' +
+            '</div>';
+        return div;
+    }
+
+    function _calcDias(entrada, salida) {
+        if(!entrada || !salida || entrada === '--' || salida === '--') return '--';
+        var d = Math.floor((new Date(salida) - new Date(entrada)) / 86400000);
+        return d >= 0 ? d + 'd' : '--';
+    }
+
+    // Consulta inventory_audit_log de Supabase filtrado por slotKey
+    async function _fetchSlotAuditLog(slotKey) {
+        try {
+            var base = supabaseConfig.url.replace(/\/+$/,'') + '/rest/v1/inventory_audit_log';
+            var url  = base + '?slot_key=eq.' + encodeURIComponent(slotKey) + '&order=created_at.desc&limit=30';
+            var res  = await fetch(url, {
+                headers: { 'apikey': supabaseConfig.anonKey, 'Authorization': 'Bearer ' + supabaseConfig.anonKey }
+            });
+            if(!res.ok) return [];
+            var data = await res.json();
+            return Array.isArray(data) ? data : [];
+        } catch(e) { return []; }
+    }
+
+    // Cerrar modal al click fuera
+    document.addEventListener('DOMContentLoaded', function(){
+        var modal = document.getElementById('modal-transferencia');
+        if(modal) modal.addEventListener('click', function(e){ if(e.target===this) window.cerrarModalTransferencia(); });
+    });
+    </script>
 
 </body>
 </html>
-
-
